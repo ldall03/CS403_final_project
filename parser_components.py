@@ -144,7 +144,7 @@ class Node:
         conn_string = '|    '
 
         current_level = len(level_markers)
-        def mapper(draw): return conn_string if draw else empty_str
+        mapper = lambda draw: conn_string if draw else empty_str
         # Map the lambda to an array of booleans which tells us which string to print
         # We print the conn_string if true because this node is not the last child if it is the case
         markers = "".join(map(mapper, level_markers[:-1]))
@@ -336,14 +336,6 @@ class LocNode(Node):
         for child in self.children:
             child.check_scopes()
 
-    def get_types(self):
-        # TODO
-        pass
-
-    def check_types(self):
-        # TODO
-        pass
-
 
 class LocclNode(Node):
     def check_scopes(self):
@@ -361,44 +353,44 @@ class BoolclNode(Node):
     def check_scopes(self):
         for child in self.children:
             child.check_scopes()
-
+            
 
 class JoinNode(Node):
     def check_scopes(self):
         for child in self.children:
             child.check_scopes()
-
-
+    
+    
 class JoinclNode(Node):
     def check_scopes(self):
         for child in self.children:
             child.check_scopes()
-
-
+            
+            
 class EqualityNode(Node):
     def check_scopes(self):
         for child in self.children:
             child.check_scopes()
-
-
+            
+            
 class EqualityclNode(Node):
     def check_scopes(self):
         for child in self.children:
             child.check_scopes()
-
-
+            
+            
 class RelNode(Node):
     def check_scopes(self):
         for child in self.children:
             child.check_scopes()
-
-
+            
+            
 class ReltailNode(Node):
     def check_scopes(self):
         for child in self.children:
             child.check_scopes()
-
-
+            
+            
 class ExprNode(Node):
     def check_scopes(self):
         for child in self.children:
@@ -424,23 +416,9 @@ class TermclNode(Node):
 
 
 class UnaryNode(Node):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.operation_node = None
-
     def check_scopes(self):
-        if self.operation_node:
-            self.operation_node.operand = self.operand
         for child in self.children:
             child.check_scopes()
-
-    def get_types(self):
-        return self.operand.get_types()
-
-    def check_types(self):
-        if self.operation_node:
-            self.operation_node.check_types()
-        self.operand.check_types()
 
 
 class FactorNode(Node):
@@ -448,44 +426,12 @@ class FactorNode(Node):
         for child in self.children:
             child.check_scopes()
 
-    def get_types(self):
-        # Should only have one children
-        return self.children[0].get_types()
 
-    def check_types(self):
-        pass
-
-
-class BasicNode(Node):
-    def get_types(self):
-        if self.token.ttype in (Vocab.FALSE, Vocab.TRUE):
-            return ("bool")
-        elif self.token.ttype in Vocab.REAL:
-            return ("double")
-        elif self.token.ttype in Vocab.NUM:
-            return ("int")
-
-
-class NotNode(ProgramNode):
-
-    def get_types(self):
-        return ("bool")
-
-    def check_scopes(self):
-        pass
-
-    def check_types(self):
-        if not self.match_types(self.operand.get_types()):
-            self.raise_type_mismatch_error(self.operand.get_types())
-
-    def run(self):
-        pass
 # ............................... #
 # .......... HIS CODE ........... #
 # ............................... #
 
-
-class MinusNode(Node):
+class MinusNode(ProgramNode):
     def get_types(self):
         return ("double", "int")
 
@@ -519,7 +465,7 @@ class MinusNode(Node):
         return self.operand.run() * -1
 
 
-class _NotNode(ProgramNode):
+class NotNode(ProgramNode):
     pass
 
 
