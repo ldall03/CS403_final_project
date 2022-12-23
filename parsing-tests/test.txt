@@ -1,0 +1,10 @@
+{
+	int i ;
+	int z ;
+	z = 3 ;
+	{
+	    int x ;
+        int i ;
+        i = 23 ;
+	}
+}
