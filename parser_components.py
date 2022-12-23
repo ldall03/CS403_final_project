@@ -382,7 +382,13 @@ class StmtNode(Node):
         if isinstance(self.children[0], LocNode):
             symbol = self.children[0].check_semantics()
             type_info = self.children[2].check_semantics()
-            if not (symbol['ttype'] == type_info['ttype'] or (symbol['ttype'] == 'double' and type_info['ttype'] == 'int')):
+            if (
+                    not (
+                            symbol['ttype'] == type_info['ttype']
+                            or (symbol['ttype'] == 'double' and type_info['ttype'] == 'int')
+                    )
+                    or symbol['is_arr']
+            ):
                 raise TypeMismatchError
 
         elif isinstance(self.children[0], BlockNode):
@@ -429,15 +435,19 @@ class LocNode(Node):
             print("UNDEFINED VARIABLE")
             raise UndefinedVariableError
 
-        symbol = SCOPE_STACK.get_name(name)
+        symbol = SCOPE_STACK.get_name(name)[name]  # Get info from symbol table
+        type_info = self.children[1].check_semantics()  # Check if we ask for an array index
+        type_dim = symbol['dim'] - type_info['dim']  # Gets the dimension of the assignment
+        if type_dim < 0:
+            raise TypeMismatchError  # If negative then we asked for higher dimension than the array has
+        is_arr = True if type_dim > 0 else False  # if type_dim is 0 then it is a basic type
+
         return {
-            'ttype': symbol[name]['ttype'],
-            'is_arr': False,
-            'dim': 0,
+            'ttype': symbol['ttype'],
+            'is_arr': is_arr,
+            'dim': type_dim,
             'value': None
         }
-
-        # TODO: handle array cases
 
 
 class LocclNode(Node):
@@ -446,8 +456,23 @@ class LocclNode(Node):
             child.check_scopes()
 
     def check_semantics(self):
-        # TODO: handle array cases
-        pass
+        if len(self.children) > 0:
+            index_info = self.children[0].check_semantics()
+            if index_info['ttype'] != 'int':
+                print("Array index must be of type int")
+                raise TypeMismatchError
+
+            loccl_info = self.children[1].check_semantics()
+            loccl_info['dim'] = loccl_info['dim'] + 1
+            loccl_info['is_arr'] = True
+            return loccl_info
+
+        return {
+            'ttype': None,
+            'is_arr': False,
+            'dim': 0,
+            'value': None
+        }
 
 
 class BoolNode(Node):
@@ -746,7 +771,11 @@ class FactorNode(Node):
             return self.children[0].check_semantics()
 
         if isinstance(self.children[0], LocNode):
-            return self.children[0].check_semantics()
+            type_info = self.children[0].check_semantics()
+            if type_info['is_arr']:
+                print("Factor must be basic type")
+                raise TypeMismatchError
+            return type_info
 
         if self.children[0].token.ttype == Vocab.NUM:
             return {
