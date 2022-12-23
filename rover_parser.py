@@ -386,8 +386,8 @@ def Loccl():
 # <loc>      ::= ID <loccl>
 def Loc():
     global CURR_TOKEN
-    current = Node(NonTerminals.LOC)
-    current.add_child(LocNode(CURR_TOKEN))
+    current = LocNode(NonTerminals.LOC)
+    current.add_child(Node(CURR_TOKEN))
     must_be(Vocab.ID)
     current.add_child(Loccl())
     return current

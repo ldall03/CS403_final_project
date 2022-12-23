@@ -336,6 +336,14 @@ class LocNode(Node):
         for child in self.children:
             child.check_scopes()
 
+    def get_types(self):
+        # TODO
+        pass
+
+    def check_types(self):
+        # TODO
+        pass
+
 
 class LocclNode(Node):
     def check_scopes(self):
