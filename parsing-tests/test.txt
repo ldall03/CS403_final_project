@@ -2,6 +2,7 @@
 	int i ;
 	int z ;
 	z = 3 ;
+	i = - i ;
 	{
 	    int x ;
         int i ;
