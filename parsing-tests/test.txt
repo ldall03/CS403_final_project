@@ -1,11 +1,30 @@
 {
-	int i ;
-	int z ;
-	z = 3 ;
-	i = - i ;
+	int my_int ;
+	int length ;
+	if ( my_int < length ) length = 55 ;
+	else {
+	    bool value ;
+	    value = true ;
+	    value = ( value || true ) && false ;
+	    length = 43 ;
+	}
+	length = 68 ;
+	length = - 5 ;
 	{
-	    int x ;
-        int i ;
-        i = 23 ;
+	    int volume ;
+	    volume = length * ( 5 - - 8 ) ;
+	}
+
+	{
+        bool other ;
+	    {
+            int value ;
+            value = - value ;
+            value = - - value ;
+            other = ! true ;
+            other = ! ! true ;
+            length = - length + 45 ;
+            length = - - - length * - value ;
+	    }
 	}
 }
