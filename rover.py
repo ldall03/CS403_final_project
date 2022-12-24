@@ -3,7 +3,7 @@ import pathlib
 import time
 import traceback
 import parser
-
+import random
 # The maximum amount of time that the rover can run in seconds
 MAX_RUNTIME = 36000
 
@@ -18,7 +18,8 @@ ROVERS = [
 # Command file is stored within the rover directory. Here we're building one file
 # for each of the rovers defined above
 ROVER_COMMAND_FILES = {
-    rover_name: pathlib.Path(pathlib.Path(__file__).parent.resolve(), f"{rover_name}.txt")
+    rover_name: pathlib.Path(pathlib.Path(
+        __file__).parent.resolve(), f"{rover_name}.txt")
     for rover_name in ROVERS
 }
 for _, file in ROVER_COMMAND_FILES.items():
@@ -55,6 +56,39 @@ def get_command(rover_name):
 class Rover:
     def __init__(self, name):
         self.name = name
+        self.map_init()
+        self.set_coord()
+
+    def map_init(self):
+
+        self.map = list()
+        # Assume same directory
+        with open("map.txt.txt", "r", encoding="utf-8") as file:
+            row = list()
+            while True:
+                char = file.read(1)
+                if not char:
+                    break
+                elif char == "\n":
+                    self.map.append(row[:])
+                    del row[:]
+                else:
+                    row.append(char)
+
+    def set_coord(self):
+        # will be use whenever new map
+        self.pos = random.choice([(r, c)
+                                  for r, line in enumerate(self.map) for c, tile in enumerate(line) if tile == " "])
+
+        # set it in degree, could keep it as 0..4 and multiplyonly when print
+        self.orientation = random.choice(range(0, 4)) * 90
+
+    def print_map(self):
+        print('\n'.join([''.join(['{:4}'.format(item) for item in row])
+                         for row in self.map]))
+
+    def print_rover(self):
+        print(f"POSITION: {self.pos},ORIENTATION: {self.orientation}")
 
     def print(self, msg):
         print(f"{self.name}: {msg}")
@@ -79,7 +113,8 @@ class Rover:
                 try:
                     self.parse_and_execute_cmd(ROVER_COMMAND[self.name])
                 except Exception as e:
-                    self.print(f"Failed to run command: {ROVER_COMMAND[self.name]}")
+                    self.print(
+                        f"Failed to run command: {ROVER_COMMAND[self.name]}")
                     self.print(traceback.format_exc())
                 finally:
                     self.print("Finished running command.\n\n")
@@ -88,19 +123,19 @@ class Rover:
 def main():
     # Initialize the rovers
     rover1 = Rover(ROVER_1)
-    rover2 = Rover(ROVER_2)
-    my_rovers = [rover1, rover2]
+    # rover2 = Rover(ROVER_2)
+    # my_rovers = [rover1, rover2]
 
     # Run the rovers in parallel
-    procs = []
-    for rover in my_rovers:
-        p = multiprocessing.Process(target=rover.wait_for_command, args=())
-        p.start()
-        procs.append(p)
+    # procs = []
+    # for rover in my_rovers:
+    #     p = multiprocessing.Process(target=rover.wait_for_command, args=())
+    #     p.start()
+    #     procs.append(p)
 
-    # Wait for the rovers to stop running (after MAX_RUNTIME)
-    for p in procs:
-        p.join()
+    # # Wait for the rovers to stop running (after MAX_RUNTIME)
+    # for p in procs:
+    #     p.join()
 
 
 if __name__ == "__main__":
