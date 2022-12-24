@@ -63,7 +63,7 @@ class Rover:
         self.print(f"Running command: {command}")
         parse_tree = parser.get_parse_tree(command)  # Parse the command
         parse_tree.show()  # Print parse tree
-        pass
+        # Check semantics
         for child in parse_tree.children:
             child.check_semantics()
 
