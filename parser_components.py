@@ -446,7 +446,13 @@ class StmtNode(Node):
 
         # If we have a block node
         elif isinstance(self.children[0], BlockNode):
-            self.children[0].check_semantics()  # Just evaluate the block
+            self.children[0].check_semantics()  # Just evaluate the block semantics
+
+        elif self.children[0] == Vocab.ROVER:
+            self.children[1].check_semantics()  # Just evaluate the action semantics
+
+        elif self.children[0] == Vocab.PRINT:
+            self.children[1].check_semantics()  # Just evaluate the bool semantics
 
         # for an IF or WHILE token:
         elif self.children[0].token.ttype in [Vocab.IF, Vocab.WHILE]:
@@ -795,7 +801,11 @@ class FactorNode(Node):
                 raise TypeMismatchError('basic type', 'array', extra='Factor must be basic type')
             return type_info
 
-        # ===== BASIC types (base cases) ===== #
+        # ===== BASIC types (base cases and rover attr.) ===== #
+        if self.children[0].token.ttype == Vocab.ROVER:
+            info = self.children[1].check_semantics()
+            print(info)
+            return info
 
         # If int return the int base type in dictionary
         if self.children[0].token.ttype == Vocab.NUM:
@@ -835,8 +845,26 @@ class RotationNode(Node):
 
 
 class GetNode(Node):
-    pass
+    def check_semantics(self):
+        if self.children[0].token.ttype == Vocab.CAN_MOVE:
+            return {
+                'ttype': 'bool',
+                'is_arr': False,
+                'dim': 0,
+                'value': None
+            }
+        else:
+            return {
+                'ttype': 'int',
+                'is_arr': False,
+                'dim': 0,
+                'value': None
+            }
 
 
 class ActionNode(Node):
-    pass
+    def check_semantics(self):
+        if self.children[0].token.ttype == Vocab.MOVE:
+            bool_info = self.children[2].check_semantics()
+            if bool_info['ttype'] != 'int':
+                raise TypeMismatchError('int', bool_info['ttype'])
