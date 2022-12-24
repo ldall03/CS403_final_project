@@ -11,7 +11,9 @@ Create nodes + parse tree using grammar:
                 | [ NUM ] <typecl>
    <stmts>    ::= e 
                 | <stmt> <stmts>
-   <stmt>     ::= <loc> = <bool> ;
+   <stmt>     ::= <loc=> = <bool> ;
+                | ROVER . <action> ;
+                | PRINT <bool> ;
                 | IF ( <bool> ) <stmt>
                 | IF ( <bool> ) <stmt> ELSE <stmt>
                 | WHILE ( <bool> ) <stmt>
@@ -48,10 +50,46 @@ Create nodes + parse tree using grammar:
                 | <factor>
    <factor>   ::= ( <bool> )
                 | <loc>
+                | ROVER . <get>
                 | NUM
                 | REAL
                 | TRUE
                 | FALSE
+
+   <action    ::= ORIENTATION
+                | X_POS
+                | Y_POS
+                | GOLD
+                | SILVER
+                | COPPER
+                | IRON
+                | POWER
+                | MAX_MOVE <direction>
+                | CAN_MOVE <direction
+
+    <action>  ::= SCAN
+                | DRILL
+                | SHOCKWAVE
+                | BUILD
+                | SONAR
+                | PUSH
+                | RECHARGE
+                | BACKFLIP
+                | PRINT_INVENTORY
+                | PRINT_MAP
+                | PRINT_POS
+                | PRINT_ORIENTATION
+                | CHANGE_MAP
+                | MOVE <direction> <bool>
+                | TURN <rotation
+
+    <direction> ::= UP
+                  | DOWN
+                  | LEFT
+                  | RIGHT
+
+    <rotation> ::= LEFT
+                 | RIGHT
 """
 
 import enum
@@ -87,7 +125,12 @@ from parser_components import (
     DeclNode,
     DeclsNode,
     BlockNode,
-    ProgramNode
+    ProgramNode,
+
+    DirectionNode,
+    RotationNode,
+    GetNode,
+    ActionNode
 )
 
 CURR_TOKEN = None
@@ -185,8 +228,137 @@ def match_cases(*cases):
     return False
 
 
+# <direction> ::= UP
+#               | DOWN
+#               | LEFT
+#               | RIGHT
+def direction():
+    global CURR_TOKEN
+    current = DirectionNode(NonTerminals.DIRECTION)
+    if match_cases(
+            Vocab.UP,
+            Vocab.DOWN,
+            Vocab.LEFT,
+            Vocab.RIGHT
+    ):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+    else:
+        raise UnexpectedTokenError(
+            f"Unexpected token found: {CURR_TOKEN.value}, "
+            f"expected: [{Vocab.UP}, {Vocab.DOWN}, {Vocab.LEFT}, {Vocab.RIGHT}]."
+        )
+
+    return current
+
+
+# <rotation> ::= LEFT
+#              | RIGHT
+def rotation():
+    global CURR_TOKEN
+    current = RotationNode(NonTerminals.ROTATION)
+    if match_cases(
+            Vocab.LEFT,
+            Vocab.RIGHT
+    ):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+    else:
+        raise UnexpectedTokenError(
+            f"Unexpected token found: {CURR_TOKEN.value}, "
+            f"expected: [{Vocab.LEFT}, {Vocab.RIGHT}]."
+        )
+
+    return current
+
+
+def get():
+    global CURR_TOKEN
+    current = GetNode(NonTerminals.GET)
+    if match_cases(
+            Vocab.ORIENTATION,
+            Vocab.X_POS,
+            Vocab.Y_POS,
+            Vocab.GOLD,
+            Vocab.SILVER,
+            Vocab.COPPER,
+            Vocab.IRON,
+            Vocab.POWER,
+    ):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+    elif match_cases(
+            Vocab.MAX_MOVE,
+            Vocab.CAN_MOVE
+    ):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+        current.add_child(direction())
+    else:
+        raise UnexpectedTokenError(
+            f"Unexpected token found: {CURR_TOKEN.value}, "
+            f"expected: _rover_getter_token."
+        )
+
+    return current
+
+
+# <action> ::= SCAN
+#            | DRILL
+#            | SHOCKWAVE
+#            | BUILD
+#            | SONAR
+#            | PUSH
+#            | RECHARGE
+#            | BACKFLIP
+#            | PRINT_INVENTORY
+#            | PRINT_MAP
+#            | PRINT_POS
+#            | PRINT_ORIENTATION
+#            | CHANGE_MAP
+#            | MOVE <direction> <bool>
+#            | TURN <rotation>
+def action():
+    global CURR_TOKEN
+    current = ActionNode(NonTerminals.ACTION)
+    if match_cases(
+            Vocab.SCAN,
+            Vocab.DRILL,
+            Vocab.SHOCKWAVE,
+            Vocab.BUILD,
+            Vocab.SONAR,
+            Vocab.PUSH,
+            Vocab.RECHARGE,
+            Vocab.BACKFLIP,
+            Vocab.PRINT_INVENTORY,
+            Vocab.PRINT_MAP,
+            Vocab.PRINT_POS,
+            Vocab.PRINT_ORIENTATION,
+            Vocab.CHANGE_MAP
+    ):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+    elif match_cases(Vocab.MOVE):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+        current.add_child(direction())
+        current.add_child(Bool())
+    elif match_cases(Vocab.TURN):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+        current.add_child(rotation())
+    else:
+        raise UnexpectedTokenError(
+            f"Unexpected token found: {CURR_TOKEN.value}, "
+            f"expected: _rover_action_token."
+        )
+
+    return current
+
+
 # <factor>   ::= ( <bool> )
 #              | <loc>
+#              | ROVER . <get>
 #              | NUM
 #              | REAL
 #              | TRUE
@@ -202,6 +374,11 @@ def Factor():
     ):
         current.add_child(Node(CURR_TOKEN))
         CURR_TOKEN = get_token()
+    elif match_cases(Vocab.ROVER):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+        must_be(Vocab.DOT)
+        current.add_child(get())
     elif match_cases(Vocab.ID):
         current.add_child(Loc())
     else:
@@ -399,6 +576,8 @@ def Loc():
 
 
 # <stmt>     ::= <loc> = <bool> ;
+#              | ROVER . <action> ;
+#              | PRINT <bool> ;
 #              | IF ( <bool> ) <stmt>
 #              | IF ( <bool> ) <stmt> ELSE <stmt>
 #              | WHILE ( <bool> ) <stmt>
@@ -431,6 +610,19 @@ def Stmt():
 
     elif match_cases(Vocab.OPEN_BRACE):
         current.add_child(Block())
+    elif match_cases(Vocab.ROVER):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+
+        must_be(Vocab.DOT)
+        current.add_child(action())
+        must_be(Vocab.SEMICOLON)
+    elif match_cases(Vocab.PRINT):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+
+        current.add_child(Bool())
+        must_be(Vocab.SEMICOLON)
     else:
         current.add_child(Loc())
         current.add_child(Node(CURR_TOKEN))
@@ -500,6 +692,8 @@ def Decls():
             Vocab.WHILE,
             Vocab.OPEN_BRACE,
             Vocab.ID,
+            Vocab.ROVER,
+            Vocab.PRINT,
             Vocab.CLOSE_BRACE,
     ):
         pass

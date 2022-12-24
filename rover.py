@@ -67,6 +67,11 @@ class Rover:
         for child in parse_tree.children:
             child.check_semantics()
 
+        print("Output:")
+        for child in parse_tree.children:
+            child.run(self)
+        print()
+
     def wait_for_command(self):
         start = time.time()
         while (time.time() - start) < MAX_RUNTIME:

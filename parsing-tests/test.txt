@@ -1,7 +1,6 @@
 {
-    int sum ;
-    int [ 10 ] [ 10 ] array ;
-    array [ 0 ] [ 0 ] = 20 ;
+    int i ;
+    i = ( 1 + 24 ) * 4 / 2 ;
+    print i ;
 
-    sum = array [ 1 ] [ 7 ] + 6 ;
 }
