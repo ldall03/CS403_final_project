@@ -34,7 +34,7 @@ class Stack:
         for d in self.arr[::-1]:
             if name in d:
                 return d
-        raise UndefinedVariableError
+        raise UndefinedVariableError(name)
 
 
 # Store scopes in a stack where the top scope
@@ -44,21 +44,37 @@ SCOPE_STACK = Stack()
 
 
 class TypeMismatchError(Exception):
-    def __init__(self):
+    def __init__(self, expected, t, extra=None):
+        self.expected = expected
+        self.type = t
+        self.extra = extra
         global SCOPE_STACK
         SCOPE_STACK = Stack()
+
+    def __str__(self):
+        if self.extra is not None:
+            return f"[SEMANTIC ERROR]: expected '{self.expected}' but got '{self.type}' instead.\n {self.extra}"
+        return f"[SEMANTIC ERROR]: expected '{self.expected}' but got '{self.type}' instead."
 
 
 class UndefinedVariableError(Exception):
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         global SCOPE_STACK
         SCOPE_STACK = Stack()
+
+    def __str__(self):
+        return f'[SEMANTIC ERROR]: variable {self.name} is undefined or out of scope.'
 
 
 class RedefinedVariableError(Exception):
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         global SCOPE_STACK
         SCOPE_STACK = Stack()
+
+    def __str__(self):
+        return f'[SEMANTIC ERROR]: variable {self.name} is defined more than once.'
 
 
 class Vocab(enum.Enum):
@@ -258,12 +274,6 @@ class Node:
             return True
         return False
 
-    def raise_type_mismatch_error(self, target):
-        raise TypeMismatchError(
-            f"Expected these types {self.get_types()}, "
-            f"but found {target}"
-        )
-
     def check_semantics(self):
         pass
         """Checks the semantics of the tree."""
@@ -309,7 +319,6 @@ class ProgramNode(Node):
 
 
 class BlockNode(Node):
-
     def check_semantics(self):
         global SCOPE_STACK
         # Add a new scope to the stack since a new block is found
@@ -324,15 +333,13 @@ class BlockNode(Node):
 
 
 class DeclNode(Node):
-
     def check_semantics(self):
         type_info = self.children[0].check_semantics()
         name = self.children[1].token.value  # name of ID
 
         # If the name already exist in current scope raise error
         if name in SCOPE_STACK.top():
-            print("CANNOT REDEFINE VARIABLE")
-            raise RedefinedVariableError
+            raise RedefinedVariableError(name)
         # Add variable to symbol table
         SCOPE_STACK.top()[name] = type_info
 
@@ -385,7 +392,7 @@ class StmtNode(Node):
                     )
                     or symbol['is_arr']
             ):
-                raise TypeMismatchError
+                raise TypeMismatchError(symbol['ttype'], type_info['ttype'])
 
         # If we have a block node
         elif isinstance(self.children[0], BlockNode):
@@ -396,8 +403,7 @@ class StmtNode(Node):
             # Make sure the condition in the statement is of type bool
             cond_info = self.children[1].check_semantics()
             if cond_info['ttype'] != 'bool':
-                print("Condition must be a boolean")
-                raise TypeMismatchError
+                raise TypeMismatchError('bool', cond_info['ttype'], "condition must be a boolean.")
 
             # Evaluate the stmt nodes
             self.children[2].check_semantics()
@@ -419,8 +425,7 @@ class LocNode(Node):
         # Check if the name is found in the open scopes
         global SCOPE_STACK
         if not SCOPE_STACK.check_open_scopes(name):
-            print("UNDEFINED VARIABLE")
-            raise UndefinedVariableError
+            raise UndefinedVariableError(name)
 
         # Handle array types
         # Can only assign to a basic type
@@ -429,7 +434,8 @@ class LocNode(Node):
         type_info = self.children[1].check_semantics()  # Check if we ask for an array index
         type_dim = symbol['dim'] - type_info['dim']  # Gets the dimension of the assignment
         if type_dim < 0:
-            raise TypeMismatchError  # If negative then we asked for higher dimension than the array has
+            # If negative then we asked for higher dimension than the array has
+            raise TypeMismatchError('valid subscript', 'invalid subscript', extra='Wrong array subscript type')
         is_arr = True if type_dim > 0 else False  # if type_dim is 0 then it is a basic type
 
         return {
@@ -447,8 +453,7 @@ class LocclNode(Node):
             # Make sure the index of the array evaluates to type 'int'
             index_info = self.children[0].check_semantics()
             if index_info['ttype'] != 'int':
-                print("Array index must be of type int")
-                raise TypeMismatchError
+                raise TypeMismatchError('int', index_info['ttype'], extra='Array index must by of type int')
 
             loccl_info = self.children[1].check_semantics()  # info about higher dim arrays
             loccl_info['dim'] = loccl_info['dim'] + 1  # add 1 to the dimension
@@ -475,7 +480,7 @@ class BoolNode(Node):
 
         # If we have boolcl then we have an || so both sides must be of type 'bool'
         if not (join_info['ttype'] == 'bool' and boolcl_info['ttype'] == 'bool'):
-            raise TypeMismatchError
+            raise TypeMismatchError('bool', '[int, double]')
 
         return join_info  # Only ttype will be used by upper nodes
 
@@ -494,7 +499,7 @@ class BoolclNode(Node):
 
         # If we have boolcl we have || so both sides must be of type 'bool'
         if not (join_info['ttype'] == 'bool' and boolcl_info['ttype'] == 'bool'):
-            raise TypeMismatchError
+            raise TypeMismatchError('bool', '[int, double]')
 
         return join_info
 
@@ -509,7 +514,7 @@ class JoinNode(Node):
 
         # If we have joincl then we have && so both sides must be of type 'bool'
         if not (equality_info['ttype'] == 'bool' and joincl_info['ttype'] == 'bool'):
-            raise TypeMismatchError
+            raise TypeMismatchError('bool', '[int, double]')
 
         return equality_info
     
@@ -528,7 +533,7 @@ class JoinclNode(Node):
 
         # If we have joincl then we have && so both sides must be of type 'bool'
         if not (equality_info['ttype'] == 'bool' and joincl_info['ttype'] == 'bool'):
-            raise TypeMismatchError
+            raise TypeMismatchError('bool', '[int, double]')
 
         return equality_info
             
@@ -546,7 +551,7 @@ class EqualityNode(Node):
                 rel_info['ttype'] == equalcl_info['ttype'] or
                 (rel_info['ttype'] in ['int', 'double'] and equalcl_info['ttype'] in ['int', 'double'])
         ):
-            raise TypeMismatchError
+            raise TypeMismatchError(rel_info['ttype'], equalcl_info['ttype'])
 
         rel_info['ttype'] = 'bool'  # == returns a boolean
         return rel_info
@@ -569,7 +574,7 @@ class EqualityclNode(Node):
                 rel_info['ttype'] == equalcl_info['ttype'] or
                 (rel_info['ttype'] in ['int', 'double'] and equalcl_info['ttype'] in ['int', 'double'])
         ):
-            raise TypeMismatchError
+            raise TypeMismatchError(rel_info['ttype'], equalcl_info['ttype'])
 
         rel_info['ttype'] = 'bool'  # == returns a boolean
         return rel_info
@@ -584,9 +589,9 @@ class RelNode(Node):
         if reltail_info is None:
             return expr_info
 
-        # If we have reltail we can only compare types 'int' or 'bool'
+        # If we have reltail we can only compare types 'int' or 'double'
         if not (expr_info['ttype'] in ['int', 'double'] and reltail_info['ttype'] in ['int', 'double']):
-            raise TypeMismatchError
+            raise TypeMismatchError('[int, double]', 'bool')
 
         expr_info['ttype'] = 'bool'  # A relation returns a boolean
         return expr_info
@@ -616,17 +621,15 @@ class ExprNode(Node):
         expr_t = exprcl_info['ttype']  # get type
         # Cannot add or subtract 'bool'
         if term_t == 'bool' or expr_t == 'bool':
-            raise TypeMismatchError
+            raise TypeMismatchError('[int, double]', 'bool')
 
-        if term_t == expr_t:  # Return the type if match
+        if term_t == expr_t:  # Return the type if match (int or double)
             return term_info
 
         # If don't match but have double or int return double (super typing)
         if term_t in ['int', 'double'] and expr_t in ['int', 'double']:
             term_info['ttype'] = 'double'
             return term_info
-
-        raise TypeMismatchError
 
 
 class ExprclNode(Node):
@@ -646,17 +649,15 @@ class ExprclNode(Node):
         expr_t = exprcl_info['ttype']  # get type
         # Cannot add or subtract 'bool'
         if term_t == 'bool' or expr_t == 'bool':
-            raise TypeMismatchError
+            raise TypeMismatchError('[int, double]', 'bool')
 
-        if term_t == expr_t:  # if types match return type
+        if term_t == expr_t:  # if types match return type (int or double)
             return term_info
 
         # If don't match but have double or int return double (super typing)
         if term_t in ['int', 'double'] and expr_t in ['int', 'double']:
             term_info['ttype'] = 'double'
             return term_info
-
-        raise TypeMismatchError
 
 
 class TermNode(Node):
@@ -672,17 +673,15 @@ class TermNode(Node):
         term_t = termcl_info['ttype']  # get type
         # Cannot mult or div 'bool'
         if unary_t == 'bool' or term_t == 'bool':
-            raise TypeMismatchError
+            raise TypeMismatchError('[int, double]', 'bool')
 
-        if unary_t == term_t:  # If types match just return type
+        if unary_t == term_t:  # If types match just return type (int or double)
             return unary_info
 
         # If don't match but have double or int return double (super typing)
         if unary_t in ['int', 'double'] and term_t in ['int', 'double']:
             unary_info['ttype'] = 'double'
             return unary_info
-
-        raise TypeMismatchError
 
 
 class TermclNode(Node):
@@ -701,17 +700,15 @@ class TermclNode(Node):
         unary_t = unary_info['ttype']  # get type
         term_t = termcl_info['ttype']  # get type
         if unary_t == 'bool' or term_t == 'bool':
-            raise TypeMismatchError
+            raise TypeMismatchError('[int, double]', 'bool')
 
-        if unary_t == term_t:  # If types match just return type
+        if unary_t == term_t:  # If types match just return type (int or double)
             return unary_info
 
         # If don't match but have double or int return double (super typing)
         if unary_t in ['int', 'double'] and term_t in ['int', 'double']:
             unary_info['ttype'] = 'double'
             return unary_info
-
-        raise TypeMismatchError
 
 
 class UnaryNode(Node):
@@ -730,7 +727,7 @@ class UnaryNode(Node):
             return unary_info
 
         # Else there was an error (theoretically should not reach that point)
-        raise TypeMismatchError
+        raise Exception
 
 
 class FactorNode(Node):
@@ -745,7 +742,7 @@ class FactorNode(Node):
             # If type is arr error because factor cannot have an array (cannot mul, div, add, sub, compare arrays)
             if type_info['is_arr']:
                 print("Factor must be basic type")
-                raise TypeMismatchError
+                raise TypeMismatchError('basic type', 'array', extra='Factor must be basic type')
             return type_info
 
         # ===== BASIC types (base cases) ===== #

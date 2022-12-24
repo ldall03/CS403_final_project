@@ -3,5 +3,5 @@
     int [ 10 ] [ 10 ] array ;
     array [ 0 ] [ 0 ] = 20 ;
 
-    sum = array [ 1 ] [ 1 ] + 6 ;
+    sum = array [ 1 ] [ 7 ] + 6 ;
 }
