@@ -12,26 +12,69 @@ class Stack:
     def pop(self):
         self.arr.pop()
 
+    # Returns the top of the stack or an index
     def top(self, i=0):
         if i >= len(self.arr):
             raise Exception
 
         return self.arr[-1 * i - 1]
 
+    # Checks if the name is in one of the open scopes
     def check_open_scopes(self, name):
-        for d in self.arr:
+        # Reverse array to get the innermost scope first
+        for d in self.arr[::-1]:
             if name in d:
                 return True
 
         return False
 
+    # Returns info about the name found in the open scope
+    def get_name(self, name):
+        # Reverse array to get the innermost scope first
+        for d in self.arr[::-1]:
+            if name in d:
+                return d
+        raise UndefinedVariableError(name)
 
+
+# Store scopes in a stack where the top scope
+# is the innermost scope.
+# When we get out of a scope we pop it
 SCOPE_STACK = Stack()
-SCOPE = {}
 
 
 class TypeMismatchError(Exception):
-    pass
+    def __init__(self, expected, t, extra=None):
+        self.expected = expected
+        self.type = t
+        self.extra = extra
+        global SCOPE_STACK
+        SCOPE_STACK = Stack()
+
+    def __str__(self):
+        if self.extra is not None:
+            return f"[SEMANTIC ERROR]: expected '{self.expected}' but got '{self.type}' instead.\n {self.extra}"
+        return f"[SEMANTIC ERROR]: expected '{self.expected}' but got '{self.type}' instead."
+
+
+class UndefinedVariableError(Exception):
+    def __init__(self, name):
+        self.name = name
+        global SCOPE_STACK
+        SCOPE_STACK = Stack()
+
+    def __str__(self):
+        return f'[SEMANTIC ERROR]: variable {self.name} is undefined or out of scope.'
+
+
+class RedefinedVariableError(Exception):
+    def __init__(self, name):
+        self.name = name
+        global SCOPE_STACK
+        SCOPE_STACK = Stack()
+
+    def __str__(self):
+        return f'[SEMANTIC ERROR]: variable {self.name} is defined more than once.'
 
 
 class Vocab(enum.Enum):
@@ -57,8 +100,8 @@ class Vocab(enum.Enum):
     GT = ">"
     PLUS = "+"
     MINUS = "-"
-    NUM = "integer"
-    REAL = "float"
+    NUM = "integer"  # not really used
+    REAL = "float"  # not really used
     TRUE = "true"
     FALSE = "false"
     NOT = "!"
@@ -66,6 +109,42 @@ class Vocab(enum.Enum):
     DIV = "/"
     BASIC = "basic"
     SEMICOLON = ";"
+
+    PRINT = "print"
+    DOT = "."
+    ROVER = "rover"
+
+    ORIENTATION = "orientation"
+    X_POS = "x_pos"
+    Y_POS = "y_pos"
+    GOLD = "gold"
+    SILVER = "silver"
+    COPPER = "copper"
+    IRON = "iron"
+    POWER = "power"
+    MAX_MOVE = "max_move"
+    CAN_MOVE = "can_move"
+
+    SCAN = "scan"
+    DRILL = "drill"
+    SHOCKWAVE = "shockwave"
+    BUILD = "build"
+    SONAR = "sonar"
+    PUSH = "push"
+    RECHARGE = "recharge"
+    BACKFLIP = "backflip"
+    PRINT_INVENTORY = "print_inventory"
+    PRINT_MAP = "print_map"
+    PRINT_POS = "print_pos"
+    PRINT_ORIENTATION = "print_orientation"
+    CHANGE_MAP = "change_map"
+    MOVE = "move"
+    TURN = "turn"
+
+    UP = "up"
+    DOWN = "down"
+    LEFT = "left"
+    RIGHT = "right"
 
 
 class NonTerminals(enum.Enum):
@@ -76,7 +155,7 @@ class NonTerminals(enum.Enum):
     DECL = 4
     TYPE = 5
     TYPECL = 6
-    STMT = 7
+    STMT = 28
     STMTS = 7
     LOC = 8
     LOCCL = 9
@@ -94,6 +173,11 @@ class NonTerminals(enum.Enum):
     TERMCL = 21
     UNARY = 22
     FACTOR = 23
+
+    GET = 24
+    ACTION = 25
+    DIRECTION = 26
+    ROTATION = 27
 
 
 class Token:
@@ -124,6 +208,7 @@ class Node:
     def add_child(self, node):
         self.children.append(node)
 
+    # Method to print the tree in XML like fashion
     def print(self, indent=0):
         symbol = self.print_val()
         if self.is_nonterminal:
@@ -135,6 +220,7 @@ class Node:
         if self.is_nonterminal:
             print(f"{' ' * indent} </ {symbol} >")
 
+    # Method to print the tree in a tree like fashion
     def show(self, level_markers=None):
         if level_markers is None:
             level_markers = []
@@ -214,8 +300,17 @@ class Node:
             return "unary"
         elif self.token == NonTerminals.FACTOR:
             return "factor"
+
+        elif self.token == NonTerminals.DIRECTION:
+            return "direction"
+        elif self.token == NonTerminals.ROTATION:
+            return "rotation"
+        elif self.token == NonTerminals.ACTION:
+            return "action"
+        elif self.token == NonTerminals.GET:
+            return "get"
         else:
-            return "???"
+            return "__UNKNOWN_TOKEN__"
 
     def get_types(self):
         raise Exception(f"Not implemented for {self.__class__.__name__}")
@@ -229,13 +324,8 @@ class Node:
             return True
         return False
 
-    def raise_type_mismatch_error(self, target):
-        raise TypeMismatchError(
-            f"Expected these types {self.get_types()}, "
-            f"but found {target}"
-        )
-
     def check_semantics(self):
+        pass
         """Checks the semantics of the tree."""
         self.check_scopes()
         self.check_types()
@@ -253,14 +343,22 @@ class Node:
             child.run()
 
 
+'''
+When check_semantics() returns somthing it is a dictionary with the following information:
+{
+    'ttypt': t,
+    'is_array': bool,
+    'dim': 0..*,        # if we have an array this is the dimension of the array
+    'value': None
+}
+
+access dict key with:
+    dict['key_name']
+'''
+
+
 class ProgramNode(Node):
     def run(self):
-        """
-        Note that you can also build the SCOPE while going through
-        the scope checking for the declarations.
-        """
-        global SCOPE
-
         result = -9
         for child in self.children:
             result = child.run()
@@ -271,224 +369,474 @@ class ProgramNode(Node):
 
 
 class BlockNode(Node):
-    def check_scopes(self):
+    def check_semantics(self):
         global SCOPE_STACK
+        # Add a new scope to the stack since a new block is found
         SCOPE_STACK.push({})
 
         for child in self.children:
-            child.check_scopes()
+            child.check_semantics()
 
+        print(SCOPE_STACK.top())
+        # Pop the stack once we get out of the scope
         SCOPE_STACK.pop()
 
 
 class DeclNode(Node):
-    def check_scopes(self):
-        # Build scope
-        var_name = self.children[1].token.value
-        symbol = {
-            'ttype': None,  # TODO: need a way to get the type
-            'val': None
-        }
-        # If var name already exist within scope then error
-        if var_name in SCOPE_STACK.top():
-            print("CANNOT REDEFINE VARIABLE")
-            raise Exception
+    def check_semantics(self):
+        type_info = self.children[0].check_semantics()
+        name = self.children[1].token.value  # name of ID
 
-        SCOPE_STACK.top()[var_name] = symbol
+        # If the name already exist in current scope raise error
+        if name in SCOPE_STACK.top():
+            raise RedefinedVariableError(name)
+        # Add variable to symbol table
+        SCOPE_STACK.top()[name] = type_info
 
 
 class DeclsNode(Node):
-    def check_scopes(self):
+    def check_semantics(self):
         for child in self.children:
-            child.check_scopes()
+            # Stops checking when a node has no children
+            child.check_semantics()
 
 
 class TypeNode(Node):
-    pass
+    def check_semantics(self):
+        ttype = self.children[0].token.value  # variable type
+        type_info = self.children[1].check_semantics()  # returns info on if it is an array or not
+        type_info['ttype'] = ttype
+
+        return type_info
 
 
 class TypeclNode(Node):
-    pass
+    def check_semantics(self):
+        # If there is children then we are dealing with an array
+        if len(self.children) > 0:
+            type_info = self.children[1].check_semantics()  # Info on dim > 1 arrays
+            type_info['dim'] = type_info['dim'] + 1  # Add a dimension every iteration
+            type_info['is_arr'] = True  # Set is_arr flag to true
+            return type_info
+
+        # No children then just basic type
+        return {
+            'ttype': None,
+            'is_arr': False,
+            'dim': 0,
+            'val': None
+        }
 
 
 class StmtNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        # If there is a loc node
+        if isinstance(self.children[0], LocNode):
+            symbol = self.children[0].check_semantics()  # Returns info from symbol table
+            type_info = self.children[2].check_semantics()  # Info on the assignment type
+            # If types don't match OR the symbol is an array then we cannot assign the value
+            if (
+                    not (
+                            symbol['ttype'] == type_info['ttype']
+                            or (symbol['ttype'] == 'double' and type_info['ttype'] == 'int')
+                    )
+                    or symbol['is_arr']
+            ):
+                raise TypeMismatchError(symbol['ttype'], type_info['ttype'])
+
+        # If we have a block node
+        elif isinstance(self.children[0], BlockNode):
+            self.children[0].check_semantics()  # Just evaluate the block
+
+        # for an IF or WHILE token:
+        elif self.children[0].token.ttype in [Vocab.IF, Vocab.WHILE]:
+            # Make sure the condition in the statement is of type bool
+            cond_info = self.children[1].check_semantics()
+            if cond_info['ttype'] != 'bool':
+                raise TypeMismatchError('bool', cond_info['ttype'], "condition must be a boolean.")
+
+            # Evaluate the stmt nodes
+            self.children[2].check_semantics()
+            if len(self.children) == 5:  # if we have an ELSE stmt
+                self.children[4].check_semantics()
 
 
 class StmtsNode(Node):
-    def check_scopes(self):
+    def check_semantics(self):
         for child in self.children:
-            child.check_scopes()
+            # Stops checking when a node has no children
+            child.check_semantics()
 
 
 class LocNode(Node):
-    def check_scopes(self):
-        var_name = self.children[0].token.value
+    def check_semantics(self):
+        name = self.children[0].token.value  # name of variable for assignment
 
+        # Check if the name is found in the open scopes
         global SCOPE_STACK
-        print(SCOPE_STACK.arr)
-        if not SCOPE_STACK.check_open_scopes(var_name):
-            print("UNDEFINED VARIABLE")
-            raise Exception
+        if not SCOPE_STACK.check_open_scopes(name):
+            raise UndefinedVariableError(name)
 
-        for child in self.children:
-            child.check_scopes()
+        # Handle array types
+        # Can only assign to a basic type
+        # So can only assign to the deepest indices of arrays
+        symbol = SCOPE_STACK.get_name(name)[name]  # Get info from symbol table
+        type_info = self.children[1].check_semantics()  # Check if we ask for an array index
+        type_dim = symbol['dim'] - type_info['dim']  # Gets the dimension of the assignment
+        if type_dim < 0:
+            # If negative then we asked for higher dimension than the array has
+            raise TypeMismatchError('valid subscript', 'invalid subscript', extra='Wrong array subscript type')
+        is_arr = True if type_dim > 0 else False  # if type_dim is 0 then it is a basic type
+
+        return {
+            'ttype': symbol['ttype'],
+            'is_arr': is_arr,
+            'dim': type_dim,
+            'value': None
+        }
 
 
 class LocclNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        # If there is children we are dealing with an array
+        if len(self.children) > 0:
+            # Make sure the index of the array evaluates to type 'int'
+            index_info = self.children[0].check_semantics()
+            if index_info['ttype'] != 'int':
+                raise TypeMismatchError('int', index_info['ttype'], extra='Array index must by of type int')
+
+            loccl_info = self.children[1].check_semantics()  # info about higher dim arrays
+            loccl_info['dim'] = loccl_info['dim'] + 1  # add 1 to the dimension
+            loccl_info['is_arr'] = True  # set is_arr flag to true
+            return loccl_info
+
+        # If no child then dealing with basic types
+        # Type will be determined by upper node
+        return {
+            'ttype': None,
+            'is_arr': False,
+            'dim': 0,
+            'value': None
+        }
 
 
 class BoolNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        join_info = self.children[0].check_semantics()
+        boolcl_info = self.children[1].check_semantics()
+        # If boolcl is empty then we only had a join node so return that (could be any type)
+        if boolcl_info is None:
+            return join_info
+
+        # If we have boolcl then we have an || so both sides must be of type 'bool'
+        if not (join_info['ttype'] == 'bool' and boolcl_info['ttype'] == 'bool'):
+            raise TypeMismatchError('bool', '[int, double]')
+
+        return join_info  # Only ttype will be used by upper nodes
 
 
 class BoolclNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
-            
+    def check_semantics(self):
+        # If no child then node is empty
+        if len(self.children) == 0:
+            return None
+
+        join_info = self.children[1].check_semantics()
+        boolcl_info = self.children[2].check_semantics()
+        # If boolcl is empty we just have a join node so return that (could be any type)
+        if boolcl_info is None:
+            return join_info
+
+        # If we have boolcl we have || so both sides must be of type 'bool'
+        if not (join_info['ttype'] == 'bool' and boolcl_info['ttype'] == 'bool'):
+            raise TypeMismatchError('bool', '[int, double]')
+
+        return join_info
+
 
 class JoinNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        equality_info = self.children[0].check_semantics()
+        joincl_info = self.children[1].check_semantics()
+        # If joincl is empty we just have an equality node so return that (could be any type)
+        if joincl_info is None:
+            return equality_info
+
+        # If we have joincl then we have && so both sides must be of type 'bool'
+        if not (equality_info['ttype'] == 'bool' and joincl_info['ttype'] == 'bool'):
+            raise TypeMismatchError('bool', '[int, double]')
+
+        return equality_info
     
     
 class JoinclNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        # If no children then the node is empty
+        if len(self.children) == 0:
+            return None
+
+        equality_info = self.children[1].check_semantics()
+        joincl_info = self.children[2].check_semantics()
+        # If joincl is empty then we only have equality node so return that (could be any type)
+        if joincl_info is None:
+            return equality_info
+
+        # If we have joincl then we have && so both sides must be of type 'bool'
+        if not (equality_info['ttype'] == 'bool' and joincl_info['ttype'] == 'bool'):
+            raise TypeMismatchError('bool', '[int, double]')
+
+        return equality_info
             
             
 class EqualityNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
-            
+    def check_semantics(self):
+        rel_info = self.children[0].check_semantics()
+        equalcl_info = self.children[1].check_semantics()
+        # If equalcl is empty we only have rel node so return that (could be any type)
+        if equalcl_info is None:
+            return rel_info
+
+        # If we have equalcl then we have == so both sides much match types or be 'int' or 'double'
+        if not (
+                rel_info['ttype'] == equalcl_info['ttype'] or
+                (rel_info['ttype'] in ['int', 'double'] and equalcl_info['ttype'] in ['int', 'double'])
+        ):
+            raise TypeMismatchError(rel_info['ttype'], equalcl_info['ttype'])
+
+        rel_info['ttype'] = 'bool'  # == returns a boolean
+        return rel_info
+
             
 class EqualityclNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        # If no children then the node is empty
+        if len(self.children) == 0:
+            return None
+
+        rel_info = self.children[1].check_semantics()
+        equalcl_info = self.children[2].check_semantics()
+        # If equalcl is empty we only have rel node so return that (could be any type)
+        if equalcl_info is None:
+            return rel_info
+
+        # If we have equalcl we have == so both sides must match types or be 'int' or 'double'
+        if not (
+                rel_info['ttype'] == equalcl_info['ttype'] or
+                (rel_info['ttype'] in ['int', 'double'] and equalcl_info['ttype'] in ['int', 'double'])
+        ):
+            raise TypeMismatchError(rel_info['ttype'], equalcl_info['ttype'])
+
+        rel_info['ttype'] = 'bool'  # == returns a boolean
+        return rel_info
             
             
 class RelNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        expr_info = self.children[0].check_semantics()
+        reltail_info = self.children[1].check_semantics()
+
+        # If reltail is empty we only have expr node so return that (could be any type)
+        if reltail_info is None:
+            return expr_info
+
+        # If we have reltail we can only compare types 'int' or 'double'
+        if not (expr_info['ttype'] in ['int', 'double'] and reltail_info['ttype'] in ['int', 'double']):
+            raise TypeMismatchError('[int, double]', 'bool')
+
+        expr_info['ttype'] = 'bool'  # A relation returns a boolean
+        return expr_info
             
             
 class ReltailNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        # If no children then node is empty
+        if len(self.children) == 0:
+            return None
+
+        # Just need to evaluate the expression
+        expr_info = self.children[1].check_semantics()
+        return expr_info
             
             
 class ExprNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        term_info = self.children[0].check_semantics()
+        exprcl_info = self.children[1].check_semantics()
+
+        # If exprecl is empty we only have term node so return that (could be any type)
+        if exprcl_info is None:
+            return term_info
+
+        term_t = term_info['ttype']  # get type
+        expr_t = exprcl_info['ttype']  # get type
+        # Cannot add or subtract 'bool'
+        if term_t == 'bool' or expr_t == 'bool':
+            raise TypeMismatchError('[int, double]', 'bool')
+
+        if term_t == expr_t:  # Return the type if match (int or double)
+            return term_info
+
+        # If don't match but have double or int return double (super typing)
+        if term_t in ['int', 'double'] and expr_t in ['int', 'double']:
+            term_info['ttype'] = 'double'
+            return term_info
 
 
 class ExprclNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    # If no child then the node is empty
+    def check_semantics(self):
+        if len(self.children) == 0:
+            return None
+
+        term_info = self.children[1].check_semantics()
+        exprcl_info = self.children[2].check_semantics()
+
+        # If exprcl is empty then we only have term node so return that (could be any type)
+        if exprcl_info is None:
+            return term_info
+
+        term_t = term_info['ttype']  # Get type
+        expr_t = exprcl_info['ttype']  # get type
+        # Cannot add or subtract 'bool'
+        if term_t == 'bool' or expr_t == 'bool':
+            raise TypeMismatchError('[int, double]', 'bool')
+
+        if term_t == expr_t:  # if types match return type (int or double)
+            return term_info
+
+        # If don't match but have double or int return double (super typing)
+        if term_t in ['int', 'double'] and expr_t in ['int', 'double']:
+            term_info['ttype'] = 'double'
+            return term_info
 
 
 class TermNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        unary_info = self.children[0].check_semantics()
+        termcl_info = self.children[1].check_semantics()
+
+        # If termcl empty then we only have unary node so return that (could be any type)
+        if termcl_info is None:
+            return unary_info
+
+        unary_t = unary_info['ttype']  # get type
+        term_t = termcl_info['ttype']  # get type
+        # Cannot mult or div 'bool'
+        if unary_t == 'bool' or term_t == 'bool':
+            raise TypeMismatchError('[int, double]', 'bool')
+
+        if unary_t == term_t:  # If types match just return type (int or double)
+            return unary_info
+
+        # If don't match but have double or int return double (super typing)
+        if unary_t in ['int', 'double'] and term_t in ['int', 'double']:
+            unary_info['ttype'] = 'double'
+            return unary_info
 
 
 class TermclNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        # If no children then the node is empty
+        if len(self.children) == 0:
+            return None
+
+        unary_info = self.children[1].check_semantics()
+        termcl_info = self.children[2].check_semantics()
+
+        # If termcl is empty we only have unary node so return that (could be any type)
+        if termcl_info is None:
+            return unary_info
+
+        unary_t = unary_info['ttype']  # get type
+        term_t = termcl_info['ttype']  # get type
+        if unary_t == 'bool' or term_t == 'bool':
+            raise TypeMismatchError('[int, double]', 'bool')
+
+        if unary_t == term_t:  # If types match just return type (int or double)
+            return unary_info
+
+        # If don't match but have double or int return double (super typing)
+        if unary_t in ['int', 'double'] and term_t in ['int', 'double']:
+            unary_info['ttype'] = 'double'
+            return unary_info
 
 
 class UnaryNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        # If only 1 child we have factor node so just check its semantics
+        if len(self.children) == 1:
+            return self.children[0].check_semantics()
+
+        unary_info = self.children[1].check_semantics()  # info about the unary node
+        op = self.children[0].token.value  # operator ('!' or '-')
+        unary_t = unary_info['ttype']  # Type of the unary node
+
+        if op == '!' and unary_t == 'bool':  # not op must operate on 'bool'
+            return unary_info
+        if op == '-' and unary_t in ['int', 'double']:  # negate op must operate on numerals
+            return unary_info
+
+        # Else there was an error (theoretically should not reach that point)
+        raise Exception
 
 
 class FactorNode(Node):
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+    def check_semantics(self):
+        # If we have ( <bool> ) just check semantics for <bool>
+        if isinstance(self.children[0], BoolNode):
+            return self.children[0].check_semantics()
 
+        # If we have Loc node return the type of variable to assign
+        if isinstance(self.children[0], LocNode):
+            type_info = self.children[0].check_semantics()
+            # If type is arr error because factor cannot have an array (cannot mul, div, add, sub, compare arrays)
+            if type_info['is_arr']:
+                print("Factor must be basic type")
+                raise TypeMismatchError('basic type', 'array', extra='Factor must be basic type')
+            return type_info
 
-# ............................... #
-# .......... HIS CODE ........... #
-# ............................... #
+        # ===== BASIC types (base cases) ===== #
 
-class MinusNode(ProgramNode):
-    def get_types(self):
-        return ("double", "int")
-
-    def check_scopes(self):
-        global SCOPE
-        self.operand.check_scopes()
-
-    def check_types(self):
-        global SCOPE
-        if not self.match_types(self.operand.get_types()):
-            self.raise_type_mismatch_error(self.operand.get_types())
-
-    def run(self):
-        """ What does this do?
-
-        In this node, you only have one child. We run, the child then
-        multiply it's result by -1. In this case, the child MUST return
-        an int or a double (hint for type checking above), then we
-        return this result.
-
-        Value storage, and retrieval should be done within the scope, e.g.
-        the scope entry for an `int i ; i = 10 ;` should look something
-        like this within the scope entry:
-            SCOPE = {
-                "i": {
-                    "name": "i"
-                    "value": 10
-                }
+        # If int return the int base type in dictionary
+        if self.children[0].token.ttype == Vocab.NUM:
+            return {
+                'ttype': 'int',
+                'is_arr': False,
+                'dim': 0,
+                'value': None
             }
-        """
-        return self.operand.run() * -1
+
+        # If double return base type in dictionary
+        if self.children[0].token.ttype == Vocab.REAL:
+            return {
+                'ttype': 'double',
+                'is_arr': False,
+                'dim': 0,
+                'value': None
+            }
+
+        # If bool return base type in dictionary
+        if self.children[0].token.ttype in [Vocab.TRUE, Vocab.FALSE]:
+            return {
+                'ttype': 'bool',
+                'is_arr': False,
+                'dim': 0,
+                'value': None
+            }
 
 
-class NotNode(ProgramNode):
+# ROVER NODES
+class DirectionNode(Node):
     pass
 
 
-class _FactorNode(ProgramNode):
+class RotationNode(Node):
     pass
 
 
-class _UnaryNode(ProgramNode):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.operation_node = None
+class GetNode(Node):
+    pass
 
-    def check_scopes(self):
-        if self.operation_node:
-            self.operation_node.operand = self.operand
-        super().check_scopes()
 
-    def check_types(self):
-        if self.operation_node:
-            self.operation_node.check_types()
-        self.operand.check_types()
-
-    def run(self):
-        if self.operation_node:
-            return self.operation_node.run()
-        return self.operand.run()
+class ActionNode(Node):
+    pass

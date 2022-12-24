@@ -1,11 +1,4 @@
 {
-	int i ;
-	int z ;
-	z = 3 ;
-	i = - i ;
-	{
-	    int x ;
-        int i ;
-        i = 23 ;
-	}
+    int [ 2 ] pos ;
+    pos [ 0 ] = 4 ;
 }
