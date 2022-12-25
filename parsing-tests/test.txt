@@ -1,11 +1,6 @@
 {
-	int i ;
-	int z ;
-	z = 3 ;
-	i = - i ;
-	{
-	    int x ;
-        int i ;
-        i = 23 ;
-	}
+    int i ;
+    i = ( 1 + 24 ) * 4 / 2 ;
+    print i ;
+
 }

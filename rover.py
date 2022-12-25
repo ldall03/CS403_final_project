@@ -63,9 +63,14 @@ class Rover:
         self.print(f"Running command: {command}")
         parse_tree = parser.get_parse_tree(command)  # Parse the command
         parse_tree.show()  # Print parse tree
+        # Check semantics
         for child in parse_tree.children:
-            child.check_scopes()
+            child.check_semantics()
 
+        print("Output:")
+        for child in parse_tree.children:
+            child.run(self)
+        print()
 
     def wait_for_command(self):
         start = time.time()
