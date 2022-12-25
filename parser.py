@@ -732,9 +732,39 @@ def get_parse_tree(file_content):
     if not file_content:
         raise Exception("Empty program given! Cannot produce a parse tree.")
 
+    # Add support for // line comments and c-style /* multi line */ comment
+    cleaned_content = ""
+    previous = ''
+    line_comment = False
+    block_comment = False
+    for c in file_content:  # loop over every char in file_content
+        if line_comment and c == '\n':  # If line comment and new line comment is done
+            line_comment = False
+            continue
+        if block_comment and previous == '*' and c == '/':  # if block comment and '*/' sequence comment is done
+            block_comment = False
+            continue
+        if line_comment or block_comment:  # if previous checks false but still in comment do nothing
+            previous = c
+            continue
+        if previous == '/' and c == '/':  # start line comment with '//' sequence
+            cleaned_content = cleaned_content[:-1]  # remove previous '/' from file
+            line_comment = True
+            previous = c
+            continue
+        if previous == '/' and c == '*':  # start block comment with '*/' sequence
+            cleaned_content = cleaned_content[:-1]  # remove previous '/' from file
+            block_comment = True
+            previous = c
+            continue
+
+        # if no comments just add the character to cleaned_content as normal
+        cleaned_content += c
+        previous = c
+
     # Split the content, then reverse the list so we
     # can use it like a stack
-    FILE_CONTENT = file_content.split()[::-1]
+    FILE_CONTENT = cleaned_content.split()[::-1]
     CURR_TOKEN = get_token()
 
     return Program()
