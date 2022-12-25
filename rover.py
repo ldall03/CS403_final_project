@@ -4,6 +4,15 @@ import time
 import traceback
 import parser
 
+
+class RunTimeError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return f'[RUNTIME ERROR]: {self.msg}'
+
+
 # The maximum amount of time that the rover can run in seconds
 MAX_RUNTIME = 36000
 
@@ -69,7 +78,10 @@ class Rover:
 
         print("Output:")
         for child in parse_tree.children:
-            child.run(self)
+            try:
+                child.run(self)
+            except TypeError as e:
+                raise RunTimeError(e.args)
         print()
 
     def wait_for_command(self):
@@ -78,7 +90,7 @@ class Rover:
             # Sleep 1 second before trying to check for
             # content again
             self.print("Waiting for command...")
-            time.sleep(5)
+            time.sleep(1)
             if get_command(self.name):
                 self.print("Found a command...")
                 try:

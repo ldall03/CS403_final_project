@@ -732,7 +732,7 @@ def get_parse_tree(file_content):
     if not file_content:
         raise Exception("Empty program given! Cannot produce a parse tree.")
 
-    # Add support for // line comments and c-style /* multi line */ comment
+    # Add support for // line comments and c-style /* multi line */ comment and multiple semi colons
     cleaned_content = ""
     previous = ''
     line_comment = False
@@ -757,6 +757,10 @@ def get_parse_tree(file_content):
             block_comment = True
             previous = c
             continue
+        if previous == ';' and c in "; \n\t\r\v\f":  # allow for multiple semicolons
+            continue
+        elif previous == ';':  # if last in semicolon add the previously flushed ' ' character to file
+            cleaned_content += ' '
 
         # if no comments just add the character to cleaned_content as normal
         cleaned_content += c

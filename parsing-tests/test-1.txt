@@ -1,7 +1,9 @@
 {
 	int my_int ;
 	int length ;
-	if ( my_int < length ) length = 55 ;
+	my_int = 5 ;
+	length = 10 ;
+	if ( my_int < length ) length = 55 ; // if stmt
 	else {
 	    bool value ;
 	    value = true ;
@@ -19,6 +21,7 @@
         bool other ;
 	    {
             int value ;
+            value = 10 ;
             value = - value ;
             value = - - value ;
             other = ! true ;
