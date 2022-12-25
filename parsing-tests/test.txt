@@ -1,7 +1,5 @@
 {
     int [ 2 ] pos ;
-
     pos [ 0 ] = rover . max_move down + rover . orientation ;
-
     print rover . silver + rover . iron * ( 4 - rover . power / - 6 ) ;
 }
