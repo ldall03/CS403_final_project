@@ -440,7 +440,7 @@ class TypeNode(Node):
             'ttype': ttype,
             # arr_info is an array [i, j, k, ...] where i j k are the length for each subarray respectively
             # ex: int [ i ] [ j ] [ k ] array ; -> [i, j, k]
-            'value': arr_info
+            'value': arr_info  # if we have an array we initialize with an array of correct size of None values
         }
 
 
@@ -528,10 +528,9 @@ class StmtNode(Node):
         if isinstance(self.children[0], LocNode):
             name_obj = self.children[0].run(rover)  # get info about variable
             bool_obj = self.children[2].run(rover)  # evaluate to bool stmt
-            val = bool_obj['value']  # get the value
 
             global SCOPE_STACK
-            SCOPE_STACK.assign(name_obj, val)  # assign the value to the correct variable in scope
+            SCOPE_STACK.assign(name_obj, bool_obj)  # assign the value to the correct variable in scope
 
         # If block node
         elif isinstance(self.children[0], BlockNode):
@@ -544,12 +543,12 @@ class StmtNode(Node):
         # If print
         elif self.children[0].token.ttype == Vocab.PRINT:
             bool_obj = self.children[1].run(rover)  # eval the bool
-            print(bool_obj['value'])  # print the value
+            print(bool_obj)  # print the value
 
         # If stmt
         elif self.children[0].token.ttype == Vocab.IF:
             bool_obj = self.children[1].run(rover)  # eval the bool
-            if bool_obj['value']:  # if true then run the first stmt
+            if bool_obj:  # if true then run the first stmt
                 self.children[2].run(rover)
             elif len(self.children) == 5:  # else if we have an else then run the second stmt
                 self.children[4].run(rover)
@@ -558,7 +557,7 @@ class StmtNode(Node):
         elif self.children[0].token.ttype == Vocab.WHILE:
             while True:  # keep going
                 bool_obj = self.children[1].run(rover)
-                if not bool_obj['value']:  # break if the bool is false
+                if not bool_obj:  # break if the bool is false
                     break
 
                 self.children[2].run(rover)  # keep running the stmt
@@ -660,12 +659,12 @@ class LocclNode(Node):
         if len(self.children) == 0:
             return None
 
-        bool_obj = self.children[0].run(rover)  # get index (from the bool)
+        bool_obj = self.children[0].run(rover)  # get index (from the bool node)
         loccl_info = self.children[1].run(rover)  # get array info
 
         if loccl_info is None:  # no subarray
-            return [bool_obj['value']]
-        return [bool_obj['value']] + loccl_info  # return [this index, next index]
+            return [bool_obj]
+        return [bool_obj] + loccl_info  # return [this index, next index]
 
 
 # <bool>     ::= <join> <boolcl>
@@ -685,20 +684,8 @@ class BoolNode(Node):
 
     def run(self, rover):
         join_obj = self.children[0].run(rover)
-        bool_obj = self.children[1].run(rover)
-
-        # If bool is empty we only have join node so return that
-        if bool_obj is None:
-            return {
-                'value': join_obj['value'],
-                'op': None
-            }
-
-        # Return the OR of both sides
-        return {
-            'value': join_obj['value'] or bool_obj['value'],
-            'op': None
-        }
+        bool_obj = self.children[1].run(rover, join_obj)  # send join down to calculate the right order
+        return bool_obj
 
 
 # <boolcl>   ::= e
@@ -721,26 +708,16 @@ class BoolclNode(Node):
 
         return join_info
 
-    def run(self, rover):
-        # If no children then empty
+    def run(self, rover, boolcl):
+        # If no children then send most recent result
         if len(self.children) == 0:
-            return None
+            return boolcl
 
         join_obj = self.children[1].run(rover)
-        bool_obj = self.children[2].run(rover)
+        join_obj = boolcl or join_obj  # calculate this bool
 
-        # If bool is empty we only have join node so return that
-        if bool_obj is None:
-            return {
-                'value': join_obj['value'],
-                'op': '||'
-            }
-
-        # Return the OR of both sides
-        return {
-            'value': join_obj['value'] or bool_obj['value'],
-            'op': '||'
-        }
+        bool_obj = self.children[2].run(rover, join_obj)  # recursive call
+        return bool_obj
 
 
 # <join>     ::= <equality> <joincl>
@@ -760,20 +737,8 @@ class JoinNode(Node):
 
     def run(self, rover):
         eq_obj = self.children[0].run(rover)
-        join_obj = self.children[1].run(rover)
-
-        # If join is empty we only have an equality node so return that
-        if join_obj is None:
-            return {
-                'value': eq_obj['value'],
-                'op': None
-            }
-
-        # Return the AND of both sides
-        return {
-            'value': eq_obj['value'] and join_obj['value'],
-            'op': None
-        }
+        join_obj = self.children[1].run(rover, eq_obj)  # send eq down to calculate the right order
+        return join_obj
     
 
 # <joincl>   ::= e
@@ -796,26 +761,16 @@ class JoinclNode(Node):
 
         return equality_info
 
-    def run(self, rover):
-        # If no children then empty node
+    def run(self, rover, join):
+        # If no children then send most recent result
         if len(self.children) == 0:
-            return None
+            return join
 
         eq_obj = self.children[1].run(rover)
-        join_obj = self.children[2].run(rover)
+        eq_obj = join and eq_obj  # calculate current join
 
-        # If join is empty we only have an equality nod so return that
-        if join_obj is None:
-            return {
-                'value': eq_obj['value'],
-                'op': '&&'
-            }
-
-        # Return the AND of both sides
-        return {
-            'value': eq_obj['value'] and join_obj['value'],
-            'op': '&&'
-        }
+        join_obj = self.children[2].run(rover, eq_obj)  # recursive call
+        return join_obj
             
 
 # <equality> ::= <rel> <equalcl>
@@ -839,27 +794,8 @@ class EqualityNode(Node):
 
     def run(self, rover):
         rel_obj = self.children[0].run(rover)
-        equalcl_obj = self.children[1].run(rover)
-
-        # If equal is empty we only have a rel node so return that
-        if equalcl_obj is None:
-            return {
-                'value': rel_obj['value'],
-                'op': None
-            }
-
-        # Check for and return the equality depending on the operator
-        op = equalcl_obj['op']
-        if op == '==':
-            return {
-                'value': rel_obj['value'] == equalcl_obj['value'],
-                'op': None
-            }
-        else:
-            return {
-                'value': rel_obj['value'] != equalcl_obj['value'],
-                'op': None
-            }
+        equalcl_obj = self.children[1].run(rover, rel_obj)  # send rel down to calculate right order
+        return equalcl_obj
 
 
 # <equalcl>  ::= e
@@ -887,34 +823,22 @@ class EqualityclNode(Node):
         rel_info['ttype'] = 'bool'  # == returns a boolean
         return rel_info
 
-    def run(self, rover):
-        # If no children then empty
+    def run(self, rover, rel):
+        # If no children then send most recent result
         if len(self.children) == 0:
-            return None
+            return rel
 
         op = self.children[0].token.value  # get operator
         rel_obj = self.children[1].run(rover)
-        equalcl_obj = self.children[2].run(rover)
 
-        # If equal is empty we only have a rel node so return that
-        if equalcl_obj is None:
-            return {
-                'value': rel_obj['value'],
-                'op': op
-            }
-
-        # Check and return for equality depending on the operator
-        eq_op = equalcl_obj['op']
-        if eq_op == '==':
-            return {
-                'value': rel_obj['value'] == equalcl_obj['value'],
-                'op': op
-            }
+        # Check and for equality depending on the operator
+        if op == '==':
+            rel_obj = rel == rel_obj
         else:
-            return {
-                'value': rel_obj['value'] != equalcl_obj['value'],
-                'op': op
-            }
+            rel_obj = rel != rel_obj
+
+        equalcl_obj = self.children[2].run(rover, rel_obj)  # recursive call
+        return equalcl_obj
             
 
 # <rel>      ::= <expr> <reltail>
@@ -936,37 +860,8 @@ class RelNode(Node):
 
     def run(self, rover):
         expr_obj = self.children[0].run(rover)
-        reltail_obj = self.children[1].run(rover)
-
-        # If reltail is empty we only have an expr node so return that
-        if reltail_obj is None:
-            return {
-                'value': expr_obj['value'],
-                'op': None
-            }
-
-        # Return the True or False depending on the operator and evaluation of both sides
-        op = reltail_obj['op']
-        if op == '<=':
-            return {
-                'value': expr_obj['value'] <= reltail_obj['value'],
-                'op': None
-            }
-        elif op == '>=':
-            return {
-                'value': expr_obj['value'] >= reltail_obj['value'],
-                'op': None
-            }
-        elif op == '>':
-            return {
-                'value': expr_obj['value'] > reltail_obj['value'],
-                'op': None
-            }
-        else:
-            return {
-                'value': expr_obj['value'] < reltail_obj['value'],
-                'op': None
-            }
+        reltail_obj = self.children[1].run(rover, expr_obj)  # send expr down to calculate right order
+        return reltail_obj
 
 
 # <reltail>  ::= e
@@ -984,18 +879,22 @@ class ReltailNode(Node):
         expr_info = self.children[1].check_semantics()
         return expr_info
 
-    def run(self, rover):
-        # If no child then empty
+    def run(self, rover, expr):
+        # If no child then send most recent result
         if len(self.children) == 0:
-            return None
+            return expr
 
-        # Get operator and evaluate expr and return
+        # Get operator and evaluate expr and return evaluation
         op = self.children[0].token.value
         expr_obj = self.children[1].run(rover)
-        return {
-            'value': expr_obj['value'],
-            'op': op
-        }
+        if op == '<=':
+            return expr <= expr_obj
+        elif op == '>=':
+            return expr >= expr_obj
+        elif op == '>':
+            return expr > expr_obj
+        else:
+            return expr < expr_obj
 
 
 # <expr>     ::= <term> <exprcl>
@@ -1024,12 +923,8 @@ class ExprNode(Node):
 
     def run(self, rover):
         term_obj = self.children[0].run(rover)
-        exprcl_obj = self.children[1].run(rover, term_obj['value'])  # Send term so we can calculate in right order
+        exprcl_obj = self.children[1].run(rover, term_obj)  # Send term so we can calculate in right order
 
-        # If exprcl is empty we only have one term so return that
-        if exprcl_obj is None:
-            return term_obj
-        # Expr has been calculated deeper so return
         return exprcl_obj
 
 
@@ -1064,33 +959,21 @@ class ExprclNode(Node):
             return term_info
 
     def run(self, rover, expr):
-        # If no children then empty
+        # If no children then return most recent result
         if len(self.children) == 0:
-            return None
+            return expr
 
         term_obj = self.children[1].run(rover)
         op = self.children[0].token.value
 
         # Calculate the term with the term sent by parent node
         if op == '+':
-            term_obj['value'] = expr + term_obj['value']
+            term_obj = expr + term_obj
         else:
-            term_obj['value'] = expr - term_obj['value']
+            term_obj = expr - term_obj
 
-        exprcl_obj = self.children[2].run(rover, term_obj['value'])  # Send term so we can calculate in right order
-
-        # If exprcl is empty we only have a term node so return that
-        if exprcl_obj is None:
-            return {
-                'value': term_obj['value'],
-                'op': op
-            }
-
-        # Else return the deeper nodes that have been calculated already
-        return {
-            'value': exprcl_obj['value'],
-            'op': op
-        }
+        exprcl_obj = self.children[2].run(rover, term_obj)  # recursive call
+        return exprcl_obj
 
 
 # <term>     ::= <unary> <termcl>
@@ -1119,12 +1002,7 @@ class TermNode(Node):
 
     def run(self, rover):
         unary_obj = self.children[0].run(rover)
-        termcl_obj = self.children[1].run(rover, unary_obj['value'])  # Send unary so we can calculate in right order
-
-        # If term is empty we only have a unary node so return that
-        if termcl_obj is None:
-            return unary_obj
-        # Term has been calculated deeper so return that
+        termcl_obj = self.children[1].run(rover, unary_obj)  # Send unary so we can calculate in right order
         return termcl_obj
 
 
@@ -1158,35 +1036,23 @@ class TermclNode(Node):
             return unary_info
 
     def run(self, rover, term):
-        # If no children then empty
+        # If no children then send most recent result
         if len(self.children) == 0:
-            return None
+            return term
 
-        unary_obj = self.children[1].run(rover)
+        unary_val = self.children[1].run(rover)
         op = self.children[0].token.value
 
         # Calculate unary with the unary sent by parent node
         if op == '*':
-            unary_obj['value'] = term * unary_obj['value']
+            unary_val = term * unary_val
         else:
-            if unary_obj['value'] == 0:
+            if unary_val == 0:
                 raise ZeroDivisionError
-            unary_obj['value'] = term / unary_obj['value']
+            unary_val = term / unary_val
 
-        termcl_obj = self.children[2].run(rover, unary_obj['value'])
-
-        # If term is empty then we only have a unary node so return that
-        if termcl_obj is None:
-            return {
-                'value': unary_obj['value'],
-                'op': op
-            }
-
-        # Else return the deeper nodes that have been calculated already
-        return {
-                    'value': termcl_obj['value'],
-                    'op': op
-                }
+        termcl_val = self.children[2].run(rover, unary_val)  # recursive call
+        return termcl_val
 
 
 # <unary>    ::= ! <unary>
@@ -1211,7 +1077,7 @@ class UnaryNode(Node):
         raise Exception
 
     def run(self, rover):
-        # If only one child we only have a factor node
+        # If only one child we only have a factor node so evaluate that
         if len(self.children) == 1:
             return self.children[0].run(rover)
 
@@ -1220,15 +1086,9 @@ class UnaryNode(Node):
 
         # Calculate the unary depending on operator and return
         if op == '!':
-            return {
-                'value': not unary_obj['value'],
-                'op': None
-            }
+            return not unary_obj
         else:
-            return {
-                'value': - unary_obj['value'],
-                'op': None
-            }
+            return - unary_obj
 
 
 # <factor>   ::= ( <bool> )
@@ -1295,52 +1155,34 @@ class FactorNode(Node):
 
         # If bool node
         if isinstance(self.children[0], BoolNode):
-            return {
-                'value': self.children[0].run(rover)['value'],  # return evaluation
-                'op': None
-            }
+            return self.children[0].run(rover)
 
         # If loc node
         if isinstance(self.children[0], LocNode):
             loc_info = self.children[0].run(rover)  # get variable arr info
             # If variable is an array then use _get_arr_index to access the correct index
             value = loc_info['value'] if len(loc_info['arr_info']) == 0 else _get_arr_index(loc_info)
-            return {
-                'value': value,
-                'op': None
-            }
+            return value
 
         # TODO:
-        if self.children[0].token.ttype == Vocab.ROVER:  # TODO: add logic
+        if self.children[0].token.ttype == Vocab.ROVER:
             return None
 
         # If int
         if self.children[0].token.ttype == Vocab.NUM:
-            return {
-                'value': int(self.children[0].token.value),  # cast string to int
-                'op': None
-            }
+            return int(self.children[0].token.value)  # cast string value to int
 
         # If double
         if self.children[0].token.ttype == Vocab.REAL:
-            return {
-                'value': float(self.children[0].token.value),  # cast string to double
-                'op': None
-            }
+            return float(self.children[0].token.value)  # cast string value to float
 
         # If true
-        if self.children[0].token.ttype == Vocab.TRUE:
-            return {
-                'value': True,
-                'op': None
-            }
+        if self.children[0].token.ttype == Vocab.TRUE:  # return boolean True
+            return True
 
         # if false
-        if self.children[0].token.ttype == Vocab.FALSE:
-            return {
-                'value': False,
-                'op': None
-            }
+        if self.children[0].token.ttype == Vocab.FALSE:  # return boolean False
+            return False
 
 
 # ROVER NODES
