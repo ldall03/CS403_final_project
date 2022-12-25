@@ -36,13 +36,14 @@ class Stack:
                 return d[name]
         raise UndefinedVariableError(name)
 
+    # Assign a value to a variable in open scopes
     def assign(self, obj, value):
-        name = obj['name']
-        ttype = obj['ttype']
-        if ttype == 'int':
+        name = obj['name']  # name of the variable
+        ttype = obj['ttype']  # type of the variable (used for in casting)
+        if ttype == 'int':  # cast to int cuz we might get a double from python division
             value = int(value)
 
-        if len(obj['arr_info']) == 0:
+        if len(obj['arr_info']) == 0:  # if not dealing with an array
             # Reverse array to get the innermost scope first
             for d in self.arr[::-1]:
                 if name in d:
@@ -50,13 +51,13 @@ class Stack:
         else:
             instance = []
             # Reverse array to get the innermost scope first
-            for d in self.arr[::-1]:
+            for d in self.arr[::-1]:  # first get the full array (stored in scope)
                 if name in d:
                     instance = d[name]['value']
-            for i in obj['arr_info'][0:-1]:
+            for i in obj['arr_info'][0:-1]:  # get selected innermost array
                 instance = instance[i]
 
-            instance[obj['arr_info'][-1]] = value
+            instance[obj['arr_info'][-1]] = value  # Change its value, this changes the value in the scope as well
 
 
 # Store scopes in a stack where the top scope
@@ -323,6 +324,7 @@ class Node:
         elif self.token == NonTerminals.FACTOR:
             return "factor"
 
+        # Rover non-terminals
         elif self.token == NonTerminals.DIRECTION:
             return "direction"
         elif self.token == NonTerminals.ROTATION:
@@ -334,37 +336,15 @@ class Node:
         else:
             return "__UNKNOWN_TOKEN__"
 
-    def get_types(self):
-        raise Exception(f"Not implemented for {self.__class__.__name__}")
-
-    def match_types(self, target_types):
-        my_types = self.get_types()
-        if any(
-            ttype in my_types
-            for ttype in target_types
-        ):
-            return True
-        return False
-
     def check_semantics(self):
-        pass
-        """Checks the semantics of the tree."""
-        self.check_scopes()
-        self.check_types()
-
-    def check_types(self):
         for child in self.children:
-            child.check_types()
-
-    def check_scopes(self):
-        for child in self.children:
-            child.check_scopes()
+            child.check_semantics()
 
 
 '''
 When check_semantics() returns somthing it is a dictionary with the following information:
 {
-    'ttypt': t,
+    'ttype': t,
     'is_array': bool,
     'dim': 0..*,        # if we have an array this is the dimension of the array
     'value': None
@@ -395,12 +375,12 @@ class BlockNode(Node):
 
     def run(self, rover):
         global SCOPE_STACK
-        SCOPE_STACK.push({})
+        SCOPE_STACK.push({})  # create a new scope
 
         self.children[0].run(rover)
         self.children[1].run(rover)
 
-        SCOPE_STACK.pop()
+        SCOPE_STACK.pop()  # remove scope when done
 
 
 # <decl>     ::= <type> ID ;
@@ -416,11 +396,11 @@ class DeclNode(Node):
         SCOPE_STACK.top()[name] = type_info
 
     def run(self, rover):
-        type_obj = self.children[0].run(rover)
-        name = self.children[1].token.value
+        type_obj = self.children[0].run(rover)  # get type info (array information as well)
+        name = self.children[1].token.value  # get var name
 
         global SCOPE_STACK
-        SCOPE_STACK.top()[name] = type_obj
+        SCOPE_STACK.top()[name] = type_obj  # add variable to scope
 
 
 # <decls>    ::= e
@@ -447,17 +427,19 @@ class TypeNode(Node):
         return type_info
 
     def run(self, rover):
-        ttype = self.children[0].token.value
-        arr_info = self.children[1].run(rover)
+        ttype = self.children[0].token.value  # get the type
+        arr_info = self.children[1].run(rover)  # info about dealing with arrays
 
-        if arr_info is None:
+        if arr_info is None:  # not dealing with an array
             return {
                 'ttype': ttype,
                 'value': None
             }
 
-        return {
+        return {  # dealing with array
             'ttype': ttype,
+            # arr_info is an array [i, j, k, ...] where i j k are the length for each subarray respectively
+            # ex: int [ i ] [ j ] [ k ] array ; -> [i, j, k]
             'value': arr_info
         }
 
@@ -482,14 +464,15 @@ class TypeclNode(Node):
         }
 
     def run(self, rover):
+        # If no children then empty
         if len(self.children) == 0:
             return None
 
-        length = int(self.children[0].token.value)
-        val = self.children[1].run(rover)
-        ret = []
+        length = int(self.children[0].token.value)  # length of current array to create
+        val = self.children[1].run(rover)  # get the value to put in the array (either None or a subarray of None)
+        ret = []  # array to return
 
-        for i in range(length):
+        for i in range(length):  # fill ret with the value found length times
             ret.append(val)
 
         return ret
@@ -541,37 +524,44 @@ class StmtNode(Node):
                 self.children[4].check_semantics()
 
     def run(self, rover):
+        # If loc node
         if isinstance(self.children[0], LocNode):
-            name = self.children[0].run(rover)
-            bool_obj = self.children[2].run(rover)
-            val = bool_obj['value']
+            name_obj = self.children[0].run(rover)  # get info about variable
+            bool_obj = self.children[2].run(rover)  # evaluate to bool stmt
+            val = bool_obj['value']  # get the value
 
             global SCOPE_STACK
-            SCOPE_STACK.assign(name, val)
+            SCOPE_STACK.assign(name_obj, val)  # assign the value to the correct variable in scope
 
+        # If block node
         elif isinstance(self.children[0], BlockNode):
-            self.children[0].run(rover)
+            self.children[0].run(rover)  # Just run the block
 
+        # TODO:
         elif self.children[0].token.ttype == Vocab.ROVER:
             return None
 
+        # If print
         elif self.children[0].token.ttype == Vocab.PRINT:
-            bool_obj = self.children[1].run(rover)
-            print(bool_obj['value'])
+            bool_obj = self.children[1].run(rover)  # eval the bool
+            print(bool_obj['value'])  # print the value
 
+        # If stmt
         elif self.children[0].token.ttype == Vocab.IF:
-            bool_obj = self.children[1].run(rover)
-            if bool_obj['value']:
+            bool_obj = self.children[1].run(rover)  # eval the bool
+            if bool_obj['value']:  # if true then run the first stmt
                 self.children[2].run(rover)
-            elif len(self.children) == 5:
+            elif len(self.children) == 5:  # else if we have an else then run the second stmt
                 self.children[4].run(rover)
+
+        # If while
         elif self.children[0].token.ttype == Vocab.WHILE:
-            while True:
+            while True:  # keep going
                 bool_obj = self.children[1].run(rover)
-                if not bool_obj['value']:
+                if not bool_obj['value']:  # break if the bool is false
                     break
 
-                self.children[2].run(rover)
+                self.children[2].run(rover)  # keep running the stmt
 
 
 # <stmts>    ::= e
@@ -619,10 +609,12 @@ class LocNode(Node):
     def run(self, rover):
         global SCOPE_STACK
         name = self.children[0].token.value
-        obj = SCOPE_STACK.get_name(name)
-        arr_info = self.children[1].run(rover)
+        obj = SCOPE_STACK.get_name(name)  # get variable from stack
 
-        if arr_info is None:
+        # arr_info is [i, j, k] where i, j, k are the indices to check when calling arr[i][j][k]
+        arr_info = self.children[1].run(rover)  # check if it is an array
+
+        if arr_info is None:  # if not an array
             return {
                 'name': name,
                 'value': obj['value'],
@@ -664,15 +656,16 @@ class LocclNode(Node):
         }
 
     def run(self, rover):
+        # If no children then empty
         if len(self.children) == 0:
             return None
 
-        bool_obj = self.children[0].run(rover)
-        loccl_info = self.children[1].run(rover)
+        bool_obj = self.children[0].run(rover)  # get index (from the bool)
+        loccl_info = self.children[1].run(rover)  # get array info
 
-        if loccl_info is None:
+        if loccl_info is None:  # no subarray
             return [bool_obj['value']]
-        return [bool_obj['value']] + loccl_info
+        return [bool_obj['value']] + loccl_info  # return [this index, next index]
 
 
 # <bool>     ::= <join> <boolcl>
@@ -694,12 +687,14 @@ class BoolNode(Node):
         join_obj = self.children[0].run(rover)
         bool_obj = self.children[1].run(rover)
 
+        # If bool is empty we only have join node so return that
         if bool_obj is None:
             return {
                 'value': join_obj['value'],
                 'op': None
             }
 
+        # Return the OR of both sides
         return {
             'value': join_obj['value'] or bool_obj['value'],
             'op': None
@@ -727,18 +722,21 @@ class BoolclNode(Node):
         return join_info
 
     def run(self, rover):
+        # If no children then empty
         if len(self.children) == 0:
             return None
 
         join_obj = self.children[1].run(rover)
         bool_obj = self.children[2].run(rover)
 
+        # If bool is empty we only have join node so return that
         if bool_obj is None:
             return {
                 'value': join_obj['value'],
                 'op': '||'
             }
 
+        # Return the OR of both sides
         return {
             'value': join_obj['value'] or bool_obj['value'],
             'op': '||'
@@ -764,12 +762,14 @@ class JoinNode(Node):
         eq_obj = self.children[0].run(rover)
         join_obj = self.children[1].run(rover)
 
+        # If join is empty we only have an equality node so return that
         if join_obj is None:
             return {
                 'value': eq_obj['value'],
                 'op': None
             }
 
+        # Return the AND of both sides
         return {
             'value': eq_obj['value'] and join_obj['value'],
             'op': None
@@ -797,18 +797,21 @@ class JoinclNode(Node):
         return equality_info
 
     def run(self, rover):
+        # If no children then empty node
         if len(self.children) == 0:
             return None
 
         eq_obj = self.children[1].run(rover)
         join_obj = self.children[2].run(rover)
 
+        # If join is empty we only have an equality nod so return that
         if join_obj is None:
             return {
                 'value': eq_obj['value'],
                 'op': '&&'
             }
 
+        # Return the AND of both sides
         return {
             'value': eq_obj['value'] and join_obj['value'],
             'op': '&&'
@@ -838,12 +841,14 @@ class EqualityNode(Node):
         rel_obj = self.children[0].run(rover)
         equalcl_obj = self.children[1].run(rover)
 
+        # If equal is empty we only have a rel node so return that
         if equalcl_obj is None:
             return {
                 'value': rel_obj['value'],
                 'op': None
             }
 
+        # Check for and return the equality depending on the operator
         op = equalcl_obj['op']
         if op == '==':
             return {
@@ -883,19 +888,22 @@ class EqualityclNode(Node):
         return rel_info
 
     def run(self, rover):
+        # If no children then empty
         if len(self.children) == 0:
             return None
 
-        op = self.children[0].token.value
+        op = self.children[0].token.value  # get operator
         rel_obj = self.children[1].run(rover)
         equalcl_obj = self.children[2].run(rover)
 
+        # If equal is empty we only have a rel node so return that
         if equalcl_obj is None:
             return {
                 'value': rel_obj['value'],
                 'op': op
             }
 
+        # Check and return for equality depending on the operator
         eq_op = equalcl_obj['op']
         if eq_op == '==':
             return {
@@ -930,12 +938,14 @@ class RelNode(Node):
         expr_obj = self.children[0].run(rover)
         reltail_obj = self.children[1].run(rover)
 
+        # If reltail is empty we only have an expr node so return that
         if reltail_obj is None:
             return {
                 'value': expr_obj['value'],
                 'op': None
             }
 
+        # Return the True or False depending on the operator and evaluation of both sides
         op = reltail_obj['op']
         if op == '<=':
             return {
@@ -975,9 +985,11 @@ class ReltailNode(Node):
         return expr_info
 
     def run(self, rover):
+        # If no child then empty
         if len(self.children) == 0:
             return None
 
+        # Get operator and evaluate expr and return
         op = self.children[0].token.value
         expr_obj = self.children[1].run(rover)
         return {
@@ -1012,10 +1024,12 @@ class ExprNode(Node):
 
     def run(self, rover):
         term_obj = self.children[0].run(rover)
-        exprcl_obj = self.children[1].run(rover, term_obj['value'])
+        exprcl_obj = self.children[1].run(rover, term_obj['value'])  # Send term so we can calculate in right order
 
+        # If exprcl is empty we only have one term so return that
         if exprcl_obj is None:
             return term_obj
+        # Expr has been calculated deeper so return
         return exprcl_obj
 
 
@@ -1050,25 +1064,29 @@ class ExprclNode(Node):
             return term_info
 
     def run(self, rover, expr):
+        # If no children then empty
         if len(self.children) == 0:
             return None
 
         term_obj = self.children[1].run(rover)
         op = self.children[0].token.value
 
+        # Calculate the term with the term sent by parent node
         if op == '+':
             term_obj['value'] = expr + term_obj['value']
         else:
             term_obj['value'] = expr - term_obj['value']
 
-        exprcl_obj = self.children[2].run(rover, term_obj['value'])
+        exprcl_obj = self.children[2].run(rover, term_obj['value'])  # Send term so we can calculate in right order
 
+        # If exprcl is empty we only have a term node so return that
         if exprcl_obj is None:
             return {
                 'value': term_obj['value'],
                 'op': op
             }
 
+        # Else return the deeper nodes that have been calculated already
         return {
             'value': exprcl_obj['value'],
             'op': op
@@ -1101,10 +1119,12 @@ class TermNode(Node):
 
     def run(self, rover):
         unary_obj = self.children[0].run(rover)
-        termcl_obj = self.children[1].run(rover, unary_obj['value'])
+        termcl_obj = self.children[1].run(rover, unary_obj['value'])  # Send unary so we can calculate in right order
 
+        # If term is empty we only have a unary node so return that
         if termcl_obj is None:
-            return unary_obj  # op is already None
+            return unary_obj
+        # Term has been calculated deeper so return that
         return termcl_obj
 
 
@@ -1138,12 +1158,14 @@ class TermclNode(Node):
             return unary_info
 
     def run(self, rover, term):
+        # If no children then empty
         if len(self.children) == 0:
             return None
 
         unary_obj = self.children[1].run(rover)
         op = self.children[0].token.value
 
+        # Calculate unary with the unary sent by parent node
         if op == '*':
             unary_obj['value'] = term * unary_obj['value']
         else:
@@ -1153,12 +1175,14 @@ class TermclNode(Node):
 
         termcl_obj = self.children[2].run(rover, unary_obj['value'])
 
+        # If term is empty then we only have a unary node so return that
         if termcl_obj is None:
             return {
                 'value': unary_obj['value'],
                 'op': op
             }
 
+        # Else return the deeper nodes that have been calculated already
         return {
                     'value': termcl_obj['value'],
                     'op': op
@@ -1187,12 +1211,14 @@ class UnaryNode(Node):
         raise Exception
 
     def run(self, rover):
+        # If only one child we only have a factor node
         if len(self.children) == 1:
             return self.children[0].run(rover)
 
         unary_obj = self.children[1].run(rover)
         op = self.children[0].token.value
 
+        # Calculate the unary depending on operator and return
         if op == '!':
             return {
                 'value': not unary_obj['value'],
@@ -1260,47 +1286,56 @@ class FactorNode(Node):
             }
 
     def run(self, rover):
-        def get_arr_index(obj):
-            arr = obj['value']
-            for i in obj['arr_info'][0:-1]:
+        def _get_arr_index(obj):
+            arr = obj['value']  # the full array stored in scope
+            # arr_info is [i, j, k] where i, j, k are the indices to check when calling arr[i][j][k]
+            for i in obj['arr_info'][0:-1]:  # Get each correct index until deepest array
                 arr = arr[i]
-            return arr[obj['arr_info'][-1]]
+            return arr[obj['arr_info'][-1]]  # return the correct deepest index value
 
+        # If bool node
         if isinstance(self.children[0], BoolNode):
             return {
-                'value': self.children[0].run(rover)['value'],
+                'value': self.children[0].run(rover)['value'],  # return evaluation
                 'op': None
             }
 
+        # If loc node
         if isinstance(self.children[0], LocNode):
-            loc_info = self.children[0].run(rover)
-            value = loc_info['value'] if len(loc_info['arr_info']) == 0 else get_arr_index(loc_info)
+            loc_info = self.children[0].run(rover)  # get variable arr info
+            # If variable is an array then use _get_arr_index to access the correct index
+            value = loc_info['value'] if len(loc_info['arr_info']) == 0 else _get_arr_index(loc_info)
             return {
                 'value': value,
                 'op': None
             }
 
+        # TODO:
         if self.children[0].token.ttype == Vocab.ROVER:  # TODO: add logic
             return None
 
+        # If int
         if self.children[0].token.ttype == Vocab.NUM:
             return {
-                'value': int(self.children[0].token.value),
+                'value': int(self.children[0].token.value),  # cast string to int
                 'op': None
             }
 
+        # If double
         if self.children[0].token.ttype == Vocab.REAL:
             return {
-                'value': float(self.children[0].token.value),
+                'value': float(self.children[0].token.value),  # cast string to double
                 'op': None
             }
 
+        # If true
         if self.children[0].token.ttype == Vocab.TRUE:
             return {
                 'value': True,
                 'op': None
             }
 
+        # if false
         if self.children[0].token.ttype == Vocab.FALSE:
             return {
                 'value': False,
@@ -1317,16 +1352,26 @@ class RotationNode(Node):
     pass
 
 
+# <get>     ::= ORIENTATION
+#             | X_POS
+#             | Y_POS
+#             | GOLD
+#             | SILVER
+#             | COPPER
+#             | IRON
+#             | POWER
+#             | MAX_MOVE <direction>
+#             | CAN_MOVE <direction
 class GetNode(Node):
     def check_semantics(self):
-        if self.children[0].token.ttype == Vocab.CAN_MOVE:
+        if self.children[0].token.ttype == Vocab.CAN_MOVE:  # can_move returns a bool
             return {
                 'ttype': 'bool',
                 'is_arr': False,
                 'dim': 0,
                 'value': None
             }
-        else:
+        else:  # the rest all return ints
             return {
                 'ttype': 'int',
                 'is_arr': False,
@@ -1335,8 +1380,24 @@ class GetNode(Node):
             }
 
 
+# <action>  ::= SCAN
+#             | DRILL
+#             | SHOCKWAVE
+#             | BUILD
+#             | SONAR
+#             | PUSH
+#             | RECHARGE
+#             | BACKFLIP
+#             | PRINT_INVENTORY
+#             | PRINT_MAP
+#             | PRINT_POS
+#             | PRINT_ORIENTATION
+#             | CHANGE_MAP
+#             | MOVE <direction> <bool>
+#             | TURN <rotation
 class ActionNode(Node):
     def check_semantics(self):
+        # If move we need to evaluate the bool expr and make sure it is an int
         if self.children[0].token.ttype == Vocab.MOVE:
             bool_info = self.children[2].check_semantics()
             if bool_info['ttype'] != 'int':

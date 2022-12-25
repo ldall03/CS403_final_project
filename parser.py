@@ -56,7 +56,7 @@ Create nodes + parse tree using grammar:
                 | TRUE
                 | FALSE
 
-   <action    ::= ORIENTATION
+   <get>      ::= ORIENTATION
                 | X_POS
                 | Y_POS
                 | GOLD
