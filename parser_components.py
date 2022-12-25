@@ -628,7 +628,6 @@ class LocNode(Node):
             'arr_info': arr_info
         }
 
-
 # <loccl>    ::= e
 #              | [ <bool> ] <loccl>
 class LocclNode(Node):
@@ -995,6 +994,7 @@ class TermNode(Node):
         if unary_t == term_t:  # If types match just return type (int or double)
             return unary_info
 
+
         # If don't match but have double or int return double (super typing)
         if unary_t in ['int', 'double'] and term_t in ['int', 'double']:
             unary_info['ttype'] = 'double'
@@ -1021,6 +1021,7 @@ class TermclNode(Node):
         # If termcl is empty we only have unary node so return that (could be any type)
         if termcl_info is None:
             return unary_info
+
 
         unary_t = unary_info['ttype']  # get type
         term_t = termcl_info['ttype']  # get type
