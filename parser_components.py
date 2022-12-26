@@ -59,7 +59,6 @@ class Stack:
 
             instance[obj['arr_info'][-1]] = value  # Change its value, this changes the value in the scope as well
 
-
 # Store scopes in a stack where the top scope
 # is the innermost scope.
 # When we get out of a scope we pop it
@@ -417,7 +416,6 @@ class DeclsNode(Node):
             # Stops checking when a node has no children
             child.run(rover)
 
-
 # <type>     ::= BASIC <typecl>
 class TypeNode(Node):
     def check_semantics(self):
@@ -475,7 +473,6 @@ class TypeclNode(Node):
 
         for i in range(length):  # fill ret with the value found length times
             ret.append(val)
-
         return ret
 
 
@@ -733,7 +730,6 @@ class JoinNode(Node):
         # If we have joincl then we have && so both sides must be of type 'bool'
         if not (equality_info['ttype'] == 'bool' and joincl_info['ttype'] == 'bool'):
             raise TypeMismatchError('bool', '[int, double, string]')
-
         return equality_info
 
     def run(self, rover):
@@ -759,7 +755,6 @@ class JoinclNode(Node):
         # If we have joincl then we have && so both sides must be of type 'bool'
         if not (equality_info['ttype'] == 'bool' and joincl_info['ttype'] == 'bool'):
             raise TypeMismatchError('bool', '[int, double, string]')
-
         return equality_info
 
     def run(self, rover, join):

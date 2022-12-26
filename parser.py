@@ -69,7 +69,7 @@ Create nodes + parse tree using grammar:
                 | MAX_MOVE <direction>
                 | CAN_MOVE <direction
 
-    <action>  ::= SCAN
+    <action>  ::= SCAN              TODO: add node
                 | DRILL
                 | SHOCKWAVE
                 | BUILD
@@ -89,12 +89,12 @@ Create nodes + parse tree using grammar:
                   | DOWN
                   | LEFT
                   | RIGHT
-
     <rotation> ::= LEFT
                  | RIGHT
 """
 
 import shlex
+import enum
 import sys
 import pathlib
 
@@ -347,7 +347,6 @@ def action():
             Vocab.RECHARGE,
             Vocab.BACKFLIP,
             Vocab.PRINT_INVENTORY,
-            Vocab.PRINT_MAP,
             Vocab.PRINT_POS,
             Vocab.PRINT_ORIENTATION
     ):
