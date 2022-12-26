@@ -1,0 +1,12 @@
+{
+    string [ 3 ] names ;
+    int i ;
+    i = 0 ;
+    names [ 0 ] = "Loic" ;
+    names [ 1 ] = "Julie " ;
+    names [ 2 ] = "Sandra" ;
+    while ( i < 3 ) {
+        print names [ i ] ;
+        i = i + 1 ;
+    }
+}

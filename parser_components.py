@@ -123,8 +123,9 @@ class Vocab(enum.Enum):
     GT = ">"
     PLUS = "+"
     MINUS = "-"
-    NUM = "integer"  # not really used
-    REAL = "float"  # not really used
+    NUM = "integer"
+    REAL = "float"
+    STRING = "string"
     TRUE = "true"
     FALSE = "false"
     NOT = "!"
@@ -628,6 +629,7 @@ class LocNode(Node):
             'arr_info': arr_info
         }
 
+
 # <loccl>    ::= e
 #              | [ <bool> ] <loccl>
 class LocclNode(Node):
@@ -677,7 +679,7 @@ class BoolNode(Node):
 
         # If we have boolcl then we have an || so both sides must be of type 'bool'
         if not (join_info['ttype'] == 'bool' and boolcl_info['ttype'] == 'bool'):
-            raise TypeMismatchError('bool', '[int, double]')
+            raise TypeMismatchError('bool', '[int, double, string]')
 
         return join_info  # Only ttype will be used by upper nodes
 
@@ -703,7 +705,7 @@ class BoolclNode(Node):
 
         # If we have boolcl we have || so both sides must be of type 'bool'
         if not (join_info['ttype'] == 'bool' and boolcl_info['ttype'] == 'bool'):
-            raise TypeMismatchError('bool', '[int, double]')
+            raise TypeMismatchError('bool', '[int, double, string]')
 
         return join_info
 
@@ -730,7 +732,7 @@ class JoinNode(Node):
 
         # If we have joincl then we have && so both sides must be of type 'bool'
         if not (equality_info['ttype'] == 'bool' and joincl_info['ttype'] == 'bool'):
-            raise TypeMismatchError('bool', '[int, double]')
+            raise TypeMismatchError('bool', '[int, double, string]')
 
         return equality_info
 
@@ -756,7 +758,7 @@ class JoinclNode(Node):
 
         # If we have joincl then we have && so both sides must be of type 'bool'
         if not (equality_info['ttype'] == 'bool' and joincl_info['ttype'] == 'bool'):
-            raise TypeMismatchError('bool', '[int, double]')
+            raise TypeMismatchError('bool', '[int, double, string]')
 
         return equality_info
 
@@ -781,6 +783,9 @@ class EqualityNode(Node):
         if equalcl_info is None:
             return rel_info
 
+        # No support for comparing strings
+        if rel_info == 'string' or equalcl_info == 'string':
+            raise TypeMismatchError('[int, double]', 'string')
         # If we have equalcl then we have == so both sides much match types or be 'int' or 'double'
         if not (
                 rel_info['ttype'] == equalcl_info['ttype'] or
@@ -812,6 +817,9 @@ class EqualityclNode(Node):
         if equalcl_info is None:
             return rel_info
 
+        # No support for comparing strings
+        if rel_info == 'string' or equalcl_info == 'string':
+            raise TypeMismatchError('[int, double]', 'string')
         # If we have equalcl we have == so both sides must match types or be 'int' or 'double'
         if not (
                 rel_info['ttype'] == equalcl_info['ttype'] or
@@ -850,9 +858,10 @@ class RelNode(Node):
         if reltail_info is None:
             return expr_info
 
-        # If we have reltail we can only compare types 'int' or 'double'
-        if not (expr_info['ttype'] in ['int', 'double'] and reltail_info['ttype'] in ['int', 'double']):
+        if expr_info == 'bool' or reltail_info == 'bool':
             raise TypeMismatchError('[int, double]', 'bool')
+        if expr_info == 'string' or reltail_info == 'string':
+            raise TypeMismatchError('[int, double]', 'string')
 
         expr_info['ttype'] = 'bool'  # A relation returns a boolean
         return expr_info
@@ -911,6 +920,8 @@ class ExprNode(Node):
         # Cannot add or subtract 'bool'
         if term_t == 'bool' or expr_t == 'bool':
             raise TypeMismatchError('[int, double]', 'bool')
+        if term_t == 'string' or term_t == 'string':
+            raise TypeMismatchError('[int, double]', 'string')
 
         if term_t == expr_t:  # Return the type if match (int or double)
             return term_info
@@ -948,6 +959,8 @@ class ExprclNode(Node):
         # Cannot add or subtract 'bool'
         if term_t == 'bool' or expr_t == 'bool':
             raise TypeMismatchError('[int, double]', 'bool')
+        if term_t == 'string' or term_t == 'string':
+            raise TypeMismatchError('[int, double]', 'string')
 
         if term_t == expr_t:  # if types match return type (int or double)
             return term_info
@@ -990,10 +1003,11 @@ class TermNode(Node):
         # Cannot mult or div 'bool'
         if unary_t == 'bool' or term_t == 'bool':
             raise TypeMismatchError('[int, double]', 'bool')
+        if unary_t == 'string' or term_t == 'string':
+            raise TypeMismatchError('[int, double]', 'string')
 
         if unary_t == term_t:  # If types match just return type (int or double)
             return unary_info
-
 
         # If don't match but have double or int return double (super typing)
         if unary_t in ['int', 'double'] and term_t in ['int', 'double']:
@@ -1022,11 +1036,12 @@ class TermclNode(Node):
         if termcl_info is None:
             return unary_info
 
-
         unary_t = unary_info['ttype']  # get type
         term_t = termcl_info['ttype']  # get type
         if unary_t == 'bool' or term_t == 'bool':
             raise TypeMismatchError('[int, double]', 'bool')
+        if unary_t == 'string' or term_t == 'string':
+            raise TypeMismatchError('[int, double]', 'string')
 
         if unary_t == term_t:  # If types match just return type (int or double)
             return unary_info
@@ -1074,8 +1089,8 @@ class UnaryNode(Node):
         if op == '-' and unary_t in ['int', 'double']:  # negate op must operate on numerals
             return unary_info
 
-        # Else there was an error (theoretically should not reach that point)
-        raise Exception
+        # Else we got a string
+        raise TypeMismatchError('bool, int, double', 'string')
 
     def run(self, rover):
         # If only one child we only have a factor node so evaluate that
@@ -1146,6 +1161,14 @@ class FactorNode(Node):
                 'value': None
             }
 
+        if self.children[0].token.ttype == Vocab.STRING:
+            return {
+                'ttype': 'string',
+                'is_arr': False,
+                'dim': 0,
+                'value': None
+            }
+
     def run(self, rover):
         def _get_arr_index(obj):
             arr = obj['value']  # the full array stored in scope
@@ -1184,6 +1207,10 @@ class FactorNode(Node):
         # if false
         if self.children[0].token.ttype == Vocab.FALSE:  # return boolean False
             return False
+
+        # if string
+        if self.children[0].token.ttype == Vocab.STRING:  # return the string
+            return self.children[0].token.value
 
 
 # ROVER NODES

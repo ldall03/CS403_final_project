@@ -55,6 +55,7 @@ Create nodes + parse tree using grammar:
                 | REAL
                 | TRUE
                 | FALSE
+                | STRING
 
    <get>      ::= ORIENTATION
                 | X_POS
@@ -64,6 +65,7 @@ Create nodes + parse tree using grammar:
                 | COPPER
                 | IRON
                 | POWER
+                | SCAN
                 | MAX_MOVE <direction>
                 | CAN_MOVE <direction
 
@@ -79,7 +81,7 @@ Create nodes + parse tree using grammar:
                 | PRINT_MAP
                 | PRINT_POS
                 | PRINT_ORIENTATION
-                | CHANGE_MAP
+                | CHANGE_MAP STRING
                 | MOVE <direction> <bool>
                 | TURN <rotation
 
@@ -92,7 +94,7 @@ Create nodes + parse tree using grammar:
                  | RIGHT
 """
 
-import enum
+import shlex
 import sys
 import pathlib
 
@@ -135,7 +137,7 @@ from parser_components import (
 
 CURR_TOKEN = None
 FILE_CONTENT = []
-TYPES = ["int", "char", "bool", "double"]
+TYPES = ["int", "string", "bool", "double"]
 
 TERMINALS = (
         set(
@@ -205,9 +207,11 @@ def get_token():
         return Token(curr, Vocab.NUM)
     if is_double(curr):
         return Token(curr, Vocab.REAL)
+    if is_str(curr):
+        return Token(curr, Vocab.STRING)
 
     # Everything else is an identifier
-    return Token(curr, Vocab.ID)
+    return Token(curr, Vocab.ID)  # TODO: allow variable of (char | _) (char | _ | digit)*
 
 
 def must_be(terminal):
@@ -272,6 +276,17 @@ def rotation():
     return current
 
 
+# <get>      ::= ORIENTATION
+#              | X_POS
+#              | Y_POS
+#              | GOLD
+#              | SILVER
+#              | COPPER
+#              | IRON
+#              | POWER
+#              | SCAN
+#              | MAX_MOVE <direction>
+#              | CAN_MOVE <direction
 def get():
     global CURR_TOKEN
     current = GetNode(NonTerminals.GET)
@@ -284,6 +299,7 @@ def get():
             Vocab.COPPER,
             Vocab.IRON,
             Vocab.POWER,
+            Vocab.SCAN
     ):
         current.add_child(Node(CURR_TOKEN))
         CURR_TOKEN = get_token()
@@ -315,7 +331,7 @@ def get():
 #            | PRINT_MAP
 #            | PRINT_POS
 #            | PRINT_ORIENTATION
-#            | CHANGE_MAP
+#            | CHANGE_MAP STRING
 #            | MOVE <direction> <bool>
 #            | TURN <rotation>
 def action():
@@ -333,11 +349,15 @@ def action():
             Vocab.PRINT_INVENTORY,
             Vocab.PRINT_MAP,
             Vocab.PRINT_POS,
-            Vocab.PRINT_ORIENTATION,
-            Vocab.CHANGE_MAP
+            Vocab.PRINT_ORIENTATION
     ):
         current.add_child(Node(CURR_TOKEN))
         CURR_TOKEN = get_token()
+    elif match_cases(Vocab.CHANGE_MAP):
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+        current.add_child(Node(CURR_TOKEN))
+        must_be(Vocab.STRING)
     elif match_cases(Vocab.MOVE):
         current.add_child(Node(CURR_TOKEN))
         CURR_TOKEN = get_token()
@@ -363,6 +383,7 @@ def action():
 #              | REAL
 #              | TRUE
 #              | FALSE
+#              | STRING
 def Factor():
     global CURR_TOKEN
     current = FactorNode(NonTerminals.FACTOR)
@@ -371,6 +392,7 @@ def Factor():
             Vocab.REAL,
             Vocab.TRUE,
             Vocab.FALSE,
+            Vocab.STRING
     ):
         current.add_child(Node(CURR_TOKEN))
         CURR_TOKEN = get_token()
@@ -733,10 +755,12 @@ def get_parse_tree(file_content):
         raise Exception("Empty program given! Cannot produce a parse tree.")
 
     # Add support for // line comments and c-style /* multi line */ comment and multiple semi colons
+    # TODO issue with semi colon after comment and strings
     cleaned_content = ""
     previous = ''
     line_comment = False
     block_comment = False
+    in_string = False
     for c in file_content:  # loop over every char in file_content
         if line_comment and c == '\n':  # If line comment and new line comment is done
             line_comment = False
@@ -744,8 +768,16 @@ def get_parse_tree(file_content):
         if block_comment and previous == '*' and c == '/':  # if block comment and '*/' sequence comment is done
             block_comment = False
             continue
-        if line_comment or block_comment:  # if previous checks false but still in comment do nothing
+        if in_string and c == '"':
+            in_string = False
+            cleaned_content += '"'
+            previous = '"'
+            continue
+        if line_comment or block_comment:  # if previous checks false but in comment or string do nothing
             previous = c
+            continue
+        if in_string:
+            cleaned_content += c
             continue
         if previous == '/' and c == '/':  # start line comment with '//' sequence
             cleaned_content = cleaned_content[:-1]  # remove previous '/' from file
@@ -756,6 +788,10 @@ def get_parse_tree(file_content):
             cleaned_content = cleaned_content[:-1]  # remove previous '/' from file
             block_comment = True
             previous = c
+            continue
+        if c == '"':
+            cleaned_content += '"'
+            in_string = True
             continue
         if previous == ';' and c in "; \n\t\r\v\f":  # allow for multiple semicolons
             continue
@@ -768,7 +804,7 @@ def get_parse_tree(file_content):
 
     # Split the content, then reverse the list so we
     # can use it like a stack
-    FILE_CONTENT = cleaned_content.split()[::-1]
+    FILE_CONTENT = shlex.split(cleaned_content, posix=False)[::-1]
     CURR_TOKEN = get_token()
 
     return Program()
