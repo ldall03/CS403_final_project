@@ -4,6 +4,8 @@ import time
 import traceback
 import parser
 import random
+import copy
+import operator
 
 # The maximum amount of time that the rover can run in seconds
 MAX_RUNTIME = 36000
@@ -66,10 +68,10 @@ class Rover:
         self.x_pos = None
         self.y_pos = None
         self.orientation = None
-        self.gold = 0
-        self.silver = 0
-        self.copper = 0
-        self.iron = 0
+        self.gold = 1
+        self.silver = 1
+        self.copper = 1
+        self.iron = 1
         self.power = 100
 
         self.map_init()
@@ -189,7 +191,10 @@ class Rover:
     # Returns True if the rover can move in the given direction
     # Should always return True or False
     def can_move(self, direction):
-        pass
+        dir = self.tiles_around[direction]
+        if self.get_tile(self.x_pos+dir[0], self.y_pos+dir[1]) == "X":
+            return False
+        return True
 
     # Change the position to move a given amount of tiles in
     # a given direction. If we cannot because of an x tile then
@@ -217,9 +222,13 @@ class Rover:
     # When on a g, s, c, or i tile, change tile to ' ' and give some
     # amount of the respective material to  the rover
     def drill(self):
-        if self.get_tile() not in self.ores_type:
+        if self.power < 10:
+            print(f"{self.name} need more power to drill")
+            return
+        elif self.get_tile() not in self.ores_type:
             print(f"{self.name} must be on a ore tile")
             return
+
         if self.get_tile() == "G":
             self.gold += 1
         elif self.get_tile() == "S":
@@ -229,6 +238,7 @@ class Rover:
         else:
             self.iron += 1
         self.remove_tile()
+        self.power -= 10
 
     # Destroy all x tiles in a radius, give a chance to transform
     # to a d tile
@@ -243,24 +253,59 @@ class Rover:
 
     # Transform a ' ' tile to a b tile, use materials from inventory
     def build(self):
-        pass
+        if self.power < 10:
+            print(f"{self.name} need more power to build")
+            return
+        elif self.get_copper() < 1 or self.get_gold() < 1 or self.get_iron() < 1 or self.get_silver() < 1:
+            print(f"{self.name} need more ores to build")
+            return
+        elif self.get_tile() != " ":
+            print(f"{self.name} must be on an empty tile")
+            return
+        self.set_tile("B")
+        self.copper -= 1
+        self.silver -= 1
+        self.gold -= 1
+        self.iron -= 1
+        self.power -= 10
 
     # Count and print and return the number of d tiles in a radius
     # This can be used as a getter as well as an action in the grammar
     # Should always return an int
-    def sonar(self):
-        pass
+
+    def sonar(self) -> int:
+        d_tiles = 0
+        for tile_coord in self.tiles_around:
+            if self.get_tile(tile_coord[0], tile_coord[1]) == "D":
+                d_tiles += 1
+        return d_tiles
 
     # When in front of an r tile, push it one tile up front if not an x
     # Chance to uncover d tile
     def push(self):
-        pass
+        front_tile = tuple(map(operator.add, (self.x_pos, self.y_pos),
+                               self.tiles_around[self.orientation]))
+        if self.get_tile(front_tile[0], front_tile[1]) != "R":
+            print(f"{self.name} must face a R tile to push")
+            return
+        next_tile = tuple(map(operator.add, front_tile,
+                              self.tiles_around[self.orientation]))
+        if self.get_tile(next_tile[0], next_tile[1]) == "X":
+            print(f"{self.name} unable to push R on an X tile")
+            return
+        self.set_tile("R", next_tile[0], next_tile[1])
+        self.remove_tile(front_tile[0], front_tile[1])
 
     # When on a digit tile, at that digit * 10 to the rovers power
     def recharge(self):
-        pass
+        if self.get_tile().isdigit():
+            self.power += int(self.get_tile()) * 10
+            self.remove_tile()
+        else:
+            print(f"{self.name} must be on a digit tile")
 
     # This is stupid but it's funny
+
     def backflip(self):
         self.orientation = (self.orientation + 2) % 4
 
@@ -276,7 +321,21 @@ class Rover:
     # Print the map with the rover in the correct position
     # use ^, >, v, < depending on the orientation
     def _print_map(self):
-        pass
+        # this is bad but good enough
+        output_map = copy.deepcopy(self.map)
+        x = ""
+        if self.orientation == 0:
+            x = "^"
+        elif self.orientation == 1:
+            x = ">"
+        elif self.orientation == 2:
+            x = "v"
+        else:
+            x = "<"
+
+        output_map[self.y_pos][self.x_pos] = x
+        print('\n'.join([''.join(['{:4}'.format(item) for item in row])
+                         for row in output_map]))
 
     # Print the current position
     def print_pos(self):
@@ -375,6 +434,29 @@ def main():  # temporary main for testing
     assert rover.map != rover_map.map
     rover.change_map("map1.txt.txt")
     assert rover.map == rover_map.map
+
+    # test recharge
+    current_power = rover.get_power()
+    rover.set_tile("1")
+    rover.recharge()
+    assert rover.get_power() == current_power + 10
+    rover.build()
+
+    # test push
+    front = tuple(map(operator.add, (rover.x_pos, rover.y_pos),
+                      rover.tiles_around[rover.orientation]))
+    rover.set_tile("R", front[0], front[1])
+    front_n = tuple(map(operator.add, front,
+                        rover.tiles_around[rover.orientation]))
+    rover.remove_tile(front_n[0], front_n[1])
+    rover.push()
+    assert rover.get_tile(front[0], front[1]) == " "
+    assert rover.get_tile(front_n[0], front_n[1]) == "R"
+
+    # test sonar
+    for tile in rover.tiles_around:
+        rover.set_tile("D", tile[0], tile[1])
+    assert rover.sonar() == 4
 
 
 if __name__ == "__main__":
