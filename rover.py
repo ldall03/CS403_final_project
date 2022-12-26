@@ -301,9 +301,13 @@ class Rover:
         self.set_coord()
 
     # Change the current orientation based on the given direction
-
     def turn(self, direction):
-        self.orientation = direction
+        if direction == 0:
+            self.orientation -= 1
+        elif direction == 1:
+            self.orientation += 1
+        if self.orientation in [-1, 4]:
+            self.orientation = 3
 
 
 def _main():
