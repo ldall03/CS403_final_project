@@ -65,7 +65,7 @@ Create nodes + parse tree using grammar:
                 | COPPER
                 | IRON
                 | POWER
-                | SCAN
+                | SONAR
                 | MAX_MOVE <direction>
                 | CAN_MOVE <direction
 
@@ -94,7 +94,6 @@ Create nodes + parse tree using grammar:
 """
 
 import shlex
-import enum
 import sys
 import pathlib
 
@@ -299,7 +298,7 @@ def get():
             Vocab.COPPER,
             Vocab.IRON,
             Vocab.POWER,
-            Vocab.SCAN
+            Vocab.SONAR
     ):
         current.add_child(Node(CURR_TOKEN))
         CURR_TOKEN = get_token()
@@ -347,6 +346,7 @@ def action():
             Vocab.RECHARGE,
             Vocab.BACKFLIP,
             Vocab.PRINT_INVENTORY,
+            Vocab.PRINT_MAP,
             Vocab.PRINT_POS,
             Vocab.PRINT_ORIENTATION
     ):

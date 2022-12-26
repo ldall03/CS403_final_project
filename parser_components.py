@@ -534,9 +534,9 @@ class StmtNode(Node):
         elif isinstance(self.children[0], BlockNode):
             self.children[0].run(rover)  # Just run the block
 
-        # TODO:
+        # If rover action
         elif self.children[0].token.ttype == Vocab.ROVER:
-            return None
+            self.children[1].run(rover)  # Just run the rover action()
 
         # If print
         elif self.children[0].token.ttype == Vocab.PRINT:
@@ -1183,9 +1183,9 @@ class FactorNode(Node):
             value = loc_info['value'] if len(loc_info['arr_info']) == 0 else _get_arr_index(loc_info)
             return value
 
-        # TODO:
+        # If rover get
         if self.children[0].token.ttype == Vocab.ROVER:
-            return None
+            return self.children[1].run(rover)  # return the get() command
 
         # If int
         if self.children[0].token.ttype == Vocab.NUM:
@@ -1205,16 +1205,28 @@ class FactorNode(Node):
 
         # if string
         if self.children[0].token.ttype == Vocab.STRING:  # return the string
-            return self.children[0].token.value
+            return self.children[0].token.value[1:-1]  # remove quotes
 
 
 # ROVER NODES
 class DirectionNode(Node):
-    pass
+    def run(self, rover):
+        if self.children[0].token.ttype == Vocab.UP:
+            return 0
+        if self.children[0].token.ttype == Vocab.RIGHT:
+            return 1
+        if self.children[0].token.ttype == Vocab.DOWN:
+            return 2
+        if self.children[0].token.ttype == Vocab.LEFT:
+            return 3
 
 
 class RotationNode(Node):
-    pass
+    def run(self, rover):
+        if self.children[0].token.ttype == Vocab.RIGHT:
+            return 0
+        if self.children[0].token.ttype == Vocab.LEFT:
+            return 1
 
 
 # <get>     ::= ORIENTATION
@@ -1225,6 +1237,7 @@ class RotationNode(Node):
 #             | COPPER
 #             | IRON
 #             | POWER
+#             | SONAR
 #             | MAX_MOVE <direction>
 #             | CAN_MOVE <direction
 class GetNode(Node):
@@ -1244,6 +1257,30 @@ class GetNode(Node):
                 'value': None
             }
 
+    def run(self, rover):
+        if self.children[0].token.ttype == Vocab.ORIENTATION:
+            return rover.orientation
+        if self.children[0].token.ttype == Vocab.X_POS:
+            return rover.x_pos
+        if self.children[0].token.ttype == Vocab.Y_POS:
+            return rover.y_pos
+        if self.children[0].token.ttype == Vocab.GOLD:
+            return rover.gold
+        if self.children[0].token.ttype == Vocab.SILVER:
+            return rover.silver
+        if self.children[0].token.ttype == Vocab.COPPER:
+            return rover.copper
+        if self.children[0].token.ttype == Vocab.IRON:
+            return rover.iron
+        if self.children[0].token.ttype == Vocab.POWER:
+            return rover.power
+        if self.children[0].token.ttype == Vocab.SONAR:
+            return rover.sonar()
+        if self.children[0].token.ttype == Vocab.CAN_MOVE:
+            return rover.can_move(self.children[1].run(rover))
+        if self.children[0].token.ttype == Vocab.MAX_MOVE:
+            return rover.max_move(self.children[1].run(rover))
+
 
 # <action>  ::= SCAN
 #             | DRILL
@@ -1257,7 +1294,7 @@ class GetNode(Node):
 #             | PRINT_MAP
 #             | PRINT_POS
 #             | PRINT_ORIENTATION
-#             | CHANGE_MAP
+#             | CHANGE_MAP STRING
 #             | MOVE <direction> <bool>
 #             | TURN <rotation
 class ActionNode(Node):
@@ -1267,3 +1304,35 @@ class ActionNode(Node):
             bool_info = self.children[2].check_semantics()
             if bool_info['ttype'] != 'int':
                 raise TypeMismatchError('int', bool_info['ttype'])
+
+    def run(self, rover):
+        if self.children[0].token.ttype == Vocab.SCAN:
+            rover.scan()
+        elif self.children[0].token.ttype == Vocab.DRILL:
+            rover.drill()
+        elif self.children[0].token.ttype == Vocab.SHOCKWAVE:
+            rover.shockwave()
+        elif self.children[0].token.ttype == Vocab.BUILD:
+            rover.build()
+        elif self.children[0].token.ttype == Vocab.SONAR:
+            rover.sonar()
+        elif self.children[0].token.ttype == Vocab.PUSH:
+            rover.push()
+        elif self.children[0].token.ttype == Vocab.RECHARGE:
+            rover.recharge()
+        elif self.children[0].token.ttype == Vocab.BACKFLIP:
+            rover.backflip()
+        elif self.children[0].token.ttype == Vocab.PRINT_INVENTORY:
+            rover.print_inventory()
+        elif self.children[0].token.ttype == Vocab.PRINT_MAP:
+            rover.print_map()
+        elif self.children[0].token.ttype == Vocab.PRINT_POS:
+            rover.print_pos()
+        elif self.children[0].token.ttype == Vocab.PRINT_ORIENTATION:
+            rover.print_orientation()
+        elif self.children[0].token.ttype == Vocab.CHANGE_MAP:
+            rover.change_map(self.children[1].token.value[1:-1])  # remove quotes from string
+        elif self.children[0].token.ttype == Vocab.MOVE:
+            rover.move(self.children[1].run(rover), self.children[2].run(rover))
+        elif self.children[0].token.ttype == Vocab.TURN:
+            rover.turn(self.children[1].run(rover))

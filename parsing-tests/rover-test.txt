@@ -1,0 +1,67 @@
+{
+    // testing all the getters
+    {
+        int o ;
+        int x ;
+        int y ;
+        int _gold ;
+        int _silver ;
+        int _copper ;
+        int _iron ;
+        int _power ;
+        // complex getters
+        int max_move_up ;
+        int max_move_down ;
+        int max_move_left ;
+        int max_move_right ;
+        bool can_move_up ;
+        bool can_move_down ;
+        bool can_move_left ;
+        bool can_move_right ;
+
+        print "Testing getters: " ;
+        o = rover . orientation ;
+        x = rover . x_pos ;
+        y = rover . y_pos ;
+        _gold = rover . gold ;
+        _silver = rover . silver ;
+        _copper = rover . copper ;
+        _iron = rover . iron ;
+        _power = rover . power ;
+        max_move_up = rover . max_move up ;
+        max_move_down = rover . max_move down ;
+        max_move_left = rover . max_move left ;
+        max_move_right = rover . max_move right ;
+        // not implemented yet
+        /**
+        bool can_move_up = rover . can_move up ;
+        bool can_move_down = rover . can_move down ;
+        bool can_move_left = rover . can_move left ;
+        bool can_move_right = rover . can_move right ;
+        **/
+        print "" ;
+    }
+
+    // Testing all actions
+    {
+        rover . scan ;
+        rover . drill ;
+        rover . shockwave ;
+        // rover . build ;
+        // rover . sonar ;
+        // rover . push ;
+        // rover . recharge ;
+        rover . backflip ;
+        rover . print_inventory ;
+        rover . print_map ;
+        rover . print_pos ;
+        rover . print_orientation ;
+        rover . change_map "map2.txt.txt" ;
+        rover . move up 5 ;
+        rover . move down 5 ;
+        rover . move left 5 ;
+        rover . move right 5 ;
+        rover . turn right ;
+        rover . turn left ;
+    }
+}
