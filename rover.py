@@ -57,7 +57,7 @@ def get_command(rover_name):
 class Rover:
     ores_type = ["G", "S", "C", "I"]
     # 0 = North, 1 = East, 2 = South, 3 = West
-    tiles_around = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    tiles_around = [(0, -1), (1, 0), (0, 1), (-1, 0)]
 
     def __init__(self, name):
         self.name = name
@@ -75,13 +75,16 @@ class Rover:
         self.map_init()
         self.set_coord()
 
-    def map_init(self, path='map.txt.txt'):
-        # Assume map.txt.txt is in same directory
+    def map_init(self, path='map1.txt.txt'):
+        # Assume map1.txt.txt is in same directory
         with open(path, "r", encoding="utf-8") as file:
             row = list()
             while True:
                 char = file.read(1)
                 if not char:
+                    # if no \n at end of last line
+                    if row:
+                        self.map.append(row[:])
                     break
                 elif char == "\n":
                     self.map.append(row[:])
@@ -94,8 +97,8 @@ class Rover:
         pos = random.choice([(r, c)
                              for r, line in enumerate(self.map)
                              for c, tile in enumerate(line) if tile == " "])
-        self.x_pos = pos[1]
         self.y_pos = pos[0]
+        self.x_pos = pos[1]
 
         # 0 = North, 1 = East, 2 = South, 3 = West
         self.orientation = random.choice(range(0, 4))
@@ -170,16 +173,35 @@ class Rover:
 
     def remove_tile(self, x=None, y=None):
         self.set_tile(" ", x, y)
+
     # Returns the maximum tiles the rover can advance in the given direction
     # Should always return an integer
-
-    def max_move(self, direction):
-        pass
+    def max_move(self, direction) -> int:
+        dir = self.tiles_around[direction]
+        steps = 0
+        while self.get_tile(self.x_pos+dir[0]*(steps+1), self.y_pos+dir[1]*(steps+1)) != "X":
+            steps += 1
+        return steps
 
     # Returns True if the rover can move in the given direction
     # Should always return True or False
     def can_move(self, direction):
         pass
+
+    # Change the position to move a given amount of tiles in
+    # a given direction. If we cannot because of an x tile then
+    # move as far as possible
+    def move(self, direction, steps):
+        dir = self.tiles_around[direction]
+        max = self.max_move(direction)
+
+        # can make this cleaner
+        if max < steps:
+            self.x_pos = self.x_pos+dir[0]*(max)
+            self.y_pos+dir[1]*(max)
+        else:
+            self.x_pos = self.x_pos+dir[0]*(steps)
+            self.y_pos+dir[1]*(steps)
 
     # If on a d tile, switch d tile to g, s, c or i randomly
     def scan(self):
@@ -208,11 +230,13 @@ class Rover:
     # Destroy all x tiles in a radius, give a chance to transform
     # to a d tile
     def shockwave(self):
-        for i in self.tiles_around:
+        for tile_coord in self.tiles_around:
             if random.uniform(0, 1) < 0.5:
-                self.set_tile("D", self.x_pos+i[0], self.y_pos+i[1])
+                self.set_tile("D", self.x_pos +
+                              tile_coord[0], self.y_pos+tile_coord[1])
             else:
-                self.remove_tile(self.x_pos+i[0], self.y_pos+i[1])
+                self.remove_tile(
+                    self.x_pos+tile_coord[0], self.y_pos+tile_coord[1])
 
     # Transform a ' ' tile to a b tile, use materials from inventory
     def build(self):
@@ -269,15 +293,12 @@ class Rover:
     # Change the map given by a path to a file and initialize
     # the rover in a random position
     def change_map(self, path: str):
-        pass
-    # Change the position to move a given amount of tiles in
-    # a given direction. If we cannot because of an x tile then
-    # move as far as possible
-
-    def move(self, direction, steps):
-        pass
+        self.map.clear()
+        self.map_init(path)
+        self.set_coord()
 
     # Change the current orientation based on the given direction
+
     def turn(self, direction):
         self.orientation = direction
 
@@ -302,10 +323,6 @@ def _main():
 
 def main():  # temporary main for testing
     rover = Rover(ROVER_1)
-    rover.print_map()
-    rover.print_orientation()
-    rover.print_pos()
-    rover.print_inventory()
 
     # changing current tile
     rover.get_tile()
@@ -332,6 +349,7 @@ def main():  # temporary main for testing
     assert rover.get_tile() == " "
     assert (rover.get_copper() or rover.get_gold()
             or rover.get_iron() or rover.get_silver()) != 0
+    rover.print_inventory()
 
     # test shockwave
     for tile in rover.tiles_around:
@@ -343,6 +361,13 @@ def main():  # temporary main for testing
     for tile in rover.tiles_around:
         assert rover.get_tile(rover.get_x_pos() +
                               tile[0], rover.get_y_pos() + tile[1]) in ["D", " "]
+
+    # test change map
+    rover_map = Rover("test_map")
+    rover.change_map("map2.txt.txt")
+    assert rover.map != rover_map.map
+    rover.change_map("map1.txt.txt")
+    assert rover.map == rover_map.map
 
 
 if __name__ == "__main__":
