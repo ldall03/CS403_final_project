@@ -235,7 +235,7 @@ class Rover:
 
     # This is stupid but it's funny
     def backflip(self):
-        pass
+        self.orientation = (self.orientation + 2) % 4
 
     # Print what is in our inventory
     def print_inventory(self):
@@ -278,8 +278,8 @@ class Rover:
         pass
 
     # Change the current orientation based on the given direction
-    def turn(self):
-        pass
+    def turn(self, direction):
+        self.orientation = direction
 
 
 def _main():
