@@ -166,13 +166,13 @@ class Rover:
         return self.power
 
     def get_tile(self, x=None, y=None) -> str:
-        if (x, y) == (None, None):  # lol ?
+        if (x, y) == (None, None):
             x, y = self.x_pos, self.y_pos
         return self.map[y][x]
 
     # if no x, y, Will be at current tile
     def set_tile(self, tile_type, x=None, y=None):
-        if (x, y) == (None, None):  # lol ?
+        if (x, y) == (None, None):
             x, y = self.x_pos, self.y_pos
         self.map[y][x] = tile_type
 
@@ -203,13 +203,12 @@ class Rover:
         dir = self.tiles_around[direction]
         max = self.max_move(direction)
 
-        # can make this cleaner
         if max < steps:
-            self.x_pos = self.x_pos+dir[0]*(max)
-            self.y_pos+dir[1]*(max)
+            self.x_pos = self.x_pos + dir[0] * max
+            self.y_pos = self.y_pos + dir[1] * max
         else:
-            self.x_pos = self.x_pos+dir[0]*(steps)
-            self.y_pos+dir[1]*(steps)
+            self.x_pos = self.x_pos + dir[0] * steps
+            self.y_pos = self.y_pos + dir[1] * steps
 
     # If on a d tile, switch d tile to g, s, c or i randomly
     def scan(self):
@@ -272,12 +271,13 @@ class Rover:
     # Count and print and return the number of d tiles in a radius
     # This can be used as a getter as well as an action in the grammar
     # Should always return an int
-
     def sonar(self) -> int:
         d_tiles = 0
-        for tile_coord in self.tiles_around:
-            if self.get_tile(tile_coord[0], tile_coord[1]) == "D":
-                d_tiles += 1
+        for x, row in enumerate(self.map):
+            for y, col in enumerate(row):
+                if self.get_tile(x, y) == "D":
+                    d_tiles += 1
+        print(f"{self.name} found {d_tiles} scannable tiles")
         return d_tiles
 
     # When in front of an r tile, push it one tile up front if not an x
@@ -294,7 +294,7 @@ class Rover:
             print(f"{self.name} unable to push R on an X tile")
             return
         self.set_tile("R", next_tile[0], next_tile[1])
-        self.remove_tile(front_tile[0], front_tile[1])
+        self.set_tile(random.choice(['X', ' ']), front_tile[0], front_tile[1])
 
     # When on a digit tile, at that digit * 10 to the rovers power
     def recharge(self):
@@ -305,7 +305,6 @@ class Rover:
             print(f"{self.name} must be on a digit tile")
 
     # This is stupid but it's funny
-
     def backflip(self):
         self.orientation = (self.orientation + 2) % 4
 
