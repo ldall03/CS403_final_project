@@ -333,6 +333,7 @@ def main():  # temporary main for testing
     assert (rover.get_copper() or rover.get_gold()
             or rover.get_iron() or rover.get_silver()) != 0
 
+    # test shockwave
     for tile in rover.tiles_around:
         rover.set_tile("X", rover.get_x_pos() +
                        tile[0], rover.get_y_pos() + tile[1])
