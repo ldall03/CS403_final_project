@@ -104,6 +104,9 @@ class Rover:
         print('\n'.join([''.join(['{:4}'.format(item) for item in row])
                          for row in self.map]))
 
+    def print(self, msg):
+        print(f"{self.name}: {msg}")
+
     def parse_and_execute_cmd(self, command):
         self.print(f"Running command: {command}")
         parse_tree = parser.get_parse_tree(command)  # Parse the command
