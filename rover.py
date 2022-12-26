@@ -76,7 +76,7 @@ class Rover:
         self.set_coord()
 
     def map_init(self, path='map.txt.txt'):
-        # Assume same directory
+        # Assume map.txt.txt is in same directory
         with open(path, "r", encoding="utf-8") as file:
             row = list()
             while True:
@@ -94,8 +94,8 @@ class Rover:
         pos = random.choice([(r, c)
                              for r, line in enumerate(self.map)
                              for c, tile in enumerate(line) if tile == " "])
-        self.x_pos = pos[0]
-        self.y_pos = pos[1]
+        self.x_pos = pos[1]
+        self.y_pos = pos[0]
 
         # 0 = North, 1 = East, 2 = South, 3 = West
         self.orientation = random.choice(range(0, 4))
@@ -160,13 +160,13 @@ class Rover:
     def get_tile(self, x=None, y=None) -> str:
         if (x, y) == (None, None):  # lol ?
             x, y = self.x_pos, self.y_pos
-        return self.map[x][y]
+        return self.map[y][x]
 
     # if no x, y, Will be at current tile
     def set_tile(self, tile_type, x=None, y=None):
         if (x, y) == (None, None):  # lol ?
             x, y = self.x_pos, self.y_pos
-        self.map[x][y] = tile_type
+        self.map[y][x] = tile_type
 
     def remove_tile(self, x=None, y=None):
         self.set_tile(" ", x, y)
@@ -268,12 +268,12 @@ class Rover:
 
     # Change the map given by a path to a file and initialize
     # the rover in a random position
-    def change_map(self):
+    def change_map(self, path: str):
         pass
-
     # Change the position to move a given amount of tiles in
     # a given direction. If we cannot because of an x tile then
     # move as far as possible
+
     def move(self, direction, steps):
         pass
 
