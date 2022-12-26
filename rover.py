@@ -55,6 +55,10 @@ def get_command(rover_name):
 
 
 class Rover:
+    ores_type = ["G", "S", "C", "I"]
+    # 0 = North, 1 = East, 2 = South, 3 = West
+    tiles_around = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
     def __init__(self, name):
         self.name = name
         self.map = list()
@@ -133,7 +137,7 @@ class Rover:
         return self.orientation
 
     def get_x_pos(self):
-        return self.get_x_pos()
+        return self.x_pos
 
     def get_y_pos(self):
         return self.y_pos
@@ -153,8 +157,22 @@ class Rover:
     def get_power(self):
         return self.power
 
+    def get_tile(self, x=None, y=None) -> str:
+        if (x, y) == (None, None):  # lol ?
+            x, y = self.x_pos, self.y_pos
+        return self.map[x][y]
+
+    # if no x, y, Will be at current tile
+    def set_tile(self, tile_type, x=None, y=None):
+        if (x, y) == (None, None):  # lol ?
+            x, y = self.x_pos, self.y_pos
+        self.map[x][y] = tile_type
+
+    def remove_tile(self, x=None, y=None):
+        self.set_tile(" ", x, y)
     # Returns the maximum tiles the rover can advance in the given direction
     # Should always return an integer
+
     def max_move(self, direction):
         pass
 
@@ -165,17 +183,36 @@ class Rover:
 
     # If on a d tile, switch d tile to g, s, c or i randomly
     def scan(self):
-        pass
+        if self.get_tile() != "D":
+            print(f"{self.name} must be on a D tile")
+            return
+        self.set_tile(random.choice(self.ores_type))
+        print(f"{self.name} found {self.get_tile()}! ")
 
     # When on a g, s, c, or i tile, change tile to ' ' and give some
     # amount of the respective material to  the rover
     def drill(self):
-        pass
+        if self.get_tile() not in self.ores_type:
+            print(f"{self.name} must be on a ore tile")
+            return
+        if self.get_tile() == "G":
+            self.gold += 1
+        elif self.get_tile() == "S":
+            self.silver += 1
+        elif self.get_tile() == "C":
+            self.copper += 1
+        else:
+            self.iron += 1
+        self.remove_tile()
 
     # Destroy all x tiles in a radius, give a chance to transform
     # to a d tile
     def shockwave(self):
-        pass
+        for i in self.tiles_around:
+            if random.uniform(0, 1) < 0.5:
+                self.set_tile("D", self.x_pos+i[0], self.y_pos+i[1])
+            else:
+                self.remove_tile(self.x_pos+i[0], self.y_pos+i[1])
 
     # Transform a ' ' tile to a b tile, use materials from inventory
     def build(self):
@@ -269,6 +306,42 @@ def main():  # temporary main for testing
     rover.print_orientation()
     rover.print_pos()
     rover.print_inventory()
+
+    # changing current tile
+    rover.get_tile()
+    assert rover.get_tile() == " "
+    rover.set_tile("X")
+    assert rover.get_tile() == "X"
+    rover.remove_tile()
+    assert rover.get_tile() == " "
+
+    # try to drill on a tile that is not an ore , will not work
+    rover.set_tile("D", rover.get_x_pos(), rover.get_y_pos())
+    assert rover.get_tile() == "D"
+    rover.drill()
+    assert rover.get_tile() == "D"
+    rover.remove_tile()
+    assert rover.get_tile() == " "
+
+    # scan and drill on a D tile
+    rover.set_tile("D", rover.get_x_pos(), rover.get_y_pos())
+    assert rover.get_tile() == "D"
+    rover.scan()
+    assert rover.get_tile() in rover.ores_type
+    rover.drill()
+    assert rover.get_tile() == " "
+    assert (rover.get_copper() or rover.get_gold()
+            or rover.get_iron() or rover.get_silver()) != 0
+
+    for tile in rover.tiles_around:
+        rover.set_tile("X", rover.get_x_pos() +
+                       tile[0], rover.get_y_pos() + tile[1])
+        assert rover.get_tile(rover.get_x_pos() +
+                              tile[0], rover.get_y_pos() + tile[1]) == "X"
+    rover.shockwave()
+    for tile in rover.tiles_around:
+        assert rover.get_tile(rover.get_x_pos() +
+                              tile[0], rover.get_y_pos() + tile[1]) in ["D", " "]
 
 
 if __name__ == "__main__":
