@@ -754,49 +754,44 @@ def get_parse_tree(file_content):
     if not file_content:
         raise Exception("Empty program given! Cannot produce a parse tree.")
 
-    # Add support for // line comments and c-style /* multi line */ comment and multiple semi colons
-    # TODO issue with semi colon after comment and strings
+    # Add support for // line comments and c-style /* multi line */ comment
     cleaned_content = ""
     previous = ''
     line_comment = False
     block_comment = False
     in_string = False
     for c in file_content:  # loop over every char in file_content
-        if line_comment and c == '\n':  # If line comment and new line comment is done
+        if line_comment and c == '\n':  # If line comment and new line, comment is done
             line_comment = False
             continue
-        if block_comment and previous == '*' and c == '/':  # if block comment and '*/' sequence comment is done
+        if block_comment and previous == '*' and c == '/':  # if block comment and '*/' sequence, comment is done
             block_comment = False
             continue
-        if in_string and c == '"':
+        if in_string and c == '"':  # if in string and ", string is done
             in_string = False
             cleaned_content += '"'
             previous = '"'
             continue
-        if line_comment or block_comment:  # if previous checks false but in comment or string do nothing
+        if line_comment or block_comment:  # if previous checks false but in comment
             previous = c
             continue
-        if in_string:
+        if in_string:  # if in string just add current character
             cleaned_content += c
             continue
         if previous == '/' and c == '/':  # start line comment with '//' sequence
-            cleaned_content = cleaned_content[:-1]  # remove previous '/' from file
+            cleaned_content = cleaned_content[:-1]  # flush previous '/' from file
             line_comment = True
             previous = c
             continue
         if previous == '/' and c == '*':  # start block comment with '*/' sequence
-            cleaned_content = cleaned_content[:-1]  # remove previous '/' from file
+            cleaned_content = cleaned_content[:-1]  # flush previous '/' from file
             block_comment = True
             previous = c
             continue
-        if c == '"':
+        if c == '"':  # if " then start a string
             cleaned_content += '"'
             in_string = True
             continue
-        if previous == ';' and c in "; \n\t\r\v\f":  # allow for multiple semicolons
-            continue
-        elif previous == ';':  # if last in semicolon add the previously flushed ' ' character to file
-            cleaned_content += ' '
 
         # if no comments just add the character to cleaned_content as normal
         cleaned_content += c
@@ -804,7 +799,7 @@ def get_parse_tree(file_content):
 
     # Split the content, then reverse the list so we
     # can use it like a stack
-    FILE_CONTENT = shlex.split(cleaned_content, posix=False)[::-1]
+    FILE_CONTENT = shlex.split(cleaned_content, posix=False)[::-1]  # Parses out strings as single tokens
     CURR_TOKEN = get_token()
 
     return Program()
