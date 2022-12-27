@@ -1,6 +1,6 @@
 {
-    string [ 3 ] names ;
-    int i ;
+    string [ 3 ] _names ;
+    int i34 ;
     i = 0 ;
     names [ 0 ] = "Loic" ;
     names [ 1 ] = "Julie " ;

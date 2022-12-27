@@ -97,6 +97,7 @@ Create nodes + parse tree using grammar:
 import shlex
 import sys
 import pathlib
+import re
 
 from parser_components import (
     Node,
@@ -211,7 +212,12 @@ def get_token():
         return Token(curr, Vocab.STRING)
 
     # Everything else is an identifier
-    return Token(curr, Vocab.ID)  # TODO: allow variable of (char | _) (char | _ | digit)*
+    regex = "^[a-zA-Z_][a-zA-Z0-9_]*"  # A regex for checking if a variable name is valid
+    if not re.search(regex, curr):  # Check if variable name is valid
+        raise UnexpectedTokenError(
+            f"Unexpected token found: {curr}, "
+            f"expected: Vocab.ID")
+    return Token(curr, Vocab.ID)
 
 
 def must_be(terminal):
