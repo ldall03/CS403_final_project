@@ -478,7 +478,8 @@ class TypeclNode(Node):
         return ret
 
 
-# <stmt>     ::= <loc> = <bool> ;
+# <stmt>     ::= ;
+#              | <loc> = <bool> ;
 #              | ROVER . <action> ;
 #              | PRINT <bool> ;
 #              | IF ( <bool> ) <stmt>

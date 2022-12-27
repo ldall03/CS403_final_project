@@ -9,9 +9,10 @@ Create nodes + parse tree using grammar:
    <type>     ::= BASIC <typecl>
    <typecl>   ::= e 
                 | [ NUM ] <typecl>
-   <stmts>    ::= e 
+   <stmts>    ::= e
                 | <stmt> <stmts>
-   <stmt>     ::= <loc=> = <bool> ;
+   <stmt>     ::= ;
+                | <loc=> = <bool> ;
                 | ROVER . <action> ;
                 | PRINT <bool> ;
                 | IF ( <bool> ) <stmt>
@@ -596,7 +597,8 @@ def Loc():
     return current
 
 
-# <stmt>     ::= <loc> = <bool> ;
+# <stmt>     ::= ;
+#              | <loc> = <bool> ;
 #              | ROVER . <action> ;
 #              | PRINT <bool> ;
 #              | IF ( <bool> ) <stmt>
@@ -606,7 +608,10 @@ def Loc():
 def Stmt():
     global CURR_TOKEN
     current = StmtNode(NonTerminals.STMT)
-    if match_cases(Vocab.IF):
+    if match_cases(Vocab.SEMICOLON):  # Allow empty stmt (just a semi-colon)
+        current.add_child(Node(CURR_TOKEN))
+        CURR_TOKEN = get_token()
+    elif match_cases(Vocab.IF):
         current.add_child(Node(CURR_TOKEN))
         CURR_TOKEN = get_token()
 
@@ -654,7 +659,7 @@ def Stmt():
     return current
 
 
-# <stmts>    ::= e 
+# <stmts>    ::= e
 #              | <stmt> <stmts>
 def Stmts():
     current = StmtsNode(NonTerminals.STMTS)
@@ -709,6 +714,7 @@ def Decl():
 def Decls():
     current = DeclsNode(NonTerminals.DECLS)
     if match_cases(
+            Vocab.SEMICOLON,
             Vocab.IF,
             Vocab.WHILE,
             Vocab.OPEN_BRACE,
