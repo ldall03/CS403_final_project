@@ -59,6 +59,7 @@ class Stack:
 
             instance[obj['arr_info'][-1]] = value  # Change its value, this changes the value in the scope as well
 
+
 # Store scopes in a stack where the top scope
 # is the innermost scope.
 # When we get out of a scope we pop it
@@ -415,6 +416,7 @@ class DeclsNode(Node):
         for child in self.children:
             # Stops checking when a node has no children
             child.run(rover)
+
 
 # <type>     ::= BASIC <typecl>
 class TypeNode(Node):
