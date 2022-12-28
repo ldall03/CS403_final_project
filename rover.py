@@ -93,19 +93,19 @@ class Rover:
             while True:
                 char = file.read(1)
                 if not char:
-                    # if no \n at end of last line
+                    # if no \n at end of last line but end of file
                     if row:
-                        self.map.append(row[:])
+                        self.map.append(row[:])  # append a copy of row
                     break
                 elif char == "\n":
-                    self.map.append(row[:])
-                    del row[:]
+                    self.map.append(row[:])  # append a copy of row
+                    del row[:]  # reset row
                 else:
                     row.append(char)
 
     def set_coord(self):
-        # will be use whenever new map
-        pos = random.choice([(r, c)
+        # will be use whenever new map is initialized
+        pos = random.choice([(r, c)  # create an array of all empty positions and choose a random one
                              for r, line in enumerate(self.map)
                              for c, tile in enumerate(line) if tile == " "])
         self.y_pos = pos[0]
@@ -113,10 +113,6 @@ class Rover:
 
         # 0 = North, 1 = East, 2 = South, 3 = West
         self.orientation = random.choice(range(0, 4))
-
-    def print_map(self):
-        print('\n'.join([''.join(['{:4}'.format(item) for item in row])
-                         for row in self.map]))
 
     def print(self, msg):
         print(f"{self.name}: {msg}")
@@ -129,13 +125,14 @@ class Rover:
         for child in parse_tree.children:
             child.check_semantics()
 
+        # Run the program
         print("Output:")
         for child in parse_tree.children:
             try:
                 child.run(self)
             except TypeError as e:
                 raise RunTimeError(e.args)
-        print()
+        print()  # print new line just for formatting
 
     def wait_for_command(self):
         start = time.time()
@@ -149,8 +146,7 @@ class Rover:
                 try:
                     self.parse_and_execute_cmd(ROVER_COMMAND[self.name])
                 except Exception as e:
-                    self.print(
-                        f"Failed to run command: {ROVER_COMMAND[self.name]}")
+                    self.print(f"Failed to run command: {ROVER_COMMAND[self.name]}")
                     self.print(traceback.format_exc())
                 finally:
                     self.print("Finished running command.\n\n")
@@ -182,34 +178,45 @@ class Rover:
     def get_power(self):
         return self.power
 
+    # Get the character in a specific tile
     def get_tile(self, x=None, y=None) -> str:
-        if (x, y) == (None, None):
-            x, y = self.x_pos, self.y_pos
+        if not x:
+            x = self.x_pos
+        if not y:
+            y = self.y_pos
         return self.map[y][x]
 
-    # if no x, y, Will be at current tile
+    # Set a specific tile
     def set_tile(self, tile_type, x=None, y=None):
-        if (x, y) == (None, None):
-            x, y = self.x_pos, self.y_pos
+        if not x:
+            x = self.x_pos
+        if not y:
+            y = self.y_pos
         self.map[y][x] = tile_type
 
+    # Set a specific tile to ' '
     def remove_tile(self, x=None, y=None):
+        if not x:
+            x = self.x_pos
+        if not y:
+            y = self.y_pos
         self.set_tile(" ", x, y)
 
     # Returns the maximum tiles the rover can advance in the given direction
     # Should always return an integer
     def max_move(self, direction) -> int:
-        dir = self.tiles_around[direction]
+        facing = self.tiles_around[direction]  # get correct direction
         steps = 0
-        while self.get_tile(self.x_pos+dir[0]*(steps+1), self.y_pos+dir[1]*(steps+1)) != "X":
+        # Check how far we can move without getting an 'X' tile
+        while self.get_tile(self.x_pos+facing[0]*(steps+1), self.y_pos+facing[1]*(steps+1)) != "X":
             steps += 1
         return steps
 
     # Returns True if the rover can move in the given direction
     # Should always return True or False
-    def can_move(self, direction):
-        dir = self.tiles_around[direction]
-        if self.get_tile(self.x_pos+dir[0], self.y_pos+dir[1]) == "X":
+    def can_move(self, direction) -> bool:
+        # Check if we can move in given direction for at least one tile
+        if self.max_move(direction) == 0:
             return False
         return True
 
@@ -217,15 +224,16 @@ class Rover:
     # a given direction. If we cannot because of an x tile then
     # move as far as possible
     def move(self, direction, steps):
-        dir = self.tiles_around[direction]
-        max = self.max_move(direction)
+        facing = self.tiles_around[direction]
+        max_move = self.max_move(direction)
 
-        if max < steps:
-            self.x_pos = self.x_pos + dir[0] * max
-            self.y_pos = self.y_pos + dir[1] * max
+        # If max_move < steps then just stop at max_move
+        if max_move < steps:
+            self.x_pos = self.x_pos + facing[0] * max_move
+            self.y_pos = self.y_pos + facing[1] * max_move
         else:
-            self.x_pos = self.x_pos + dir[0] * steps
-            self.y_pos = self.y_pos + dir[1] * steps
+            self.x_pos = self.x_pos + facing[0] * steps
+            self.y_pos = self.y_pos + facing[1] * steps
 
     # If on a d tile, switch d tile to g, s, c or i randomly
     def scan(self):
@@ -236,36 +244,34 @@ class Rover:
         print(f"{self.name} found {self.get_tile()}! ")
 
     # When on a g, s, c, or i tile, change tile to ' ' and give some
-    # amount of the respective material to  the rover
+    # amount of the respective material to the rover
     def drill(self):
-        if self.power < 10:
+        if self.power < 10:  # check if the rover has enough power
             print(f"{self.name} need more power to drill")
             return
         elif self.get_tile() not in self.ores_type:
             print(f"{self.name} must be on a ore tile")
             return
 
-        if self.get_tile() == "G":
+        if self.get_tile() == "G":  # gold tile
             self.gold += 1
-        elif self.get_tile() == "S":
+        elif self.get_tile() == "S":  # silver tile
             self.silver += 1
-        elif self.get_tile() == "C":
+        elif self.get_tile() == "C":  # copper tile
             self.copper += 1
-        else:
+        else:  # else we have an iron tile
             self.iron += 1
-        self.remove_tile()
-        self.power -= 10
+        self.remove_tile()  # set tile to ' '
+        self.power -= 10  # drilling costs 10 power
 
     # Destroy all x tiles in a radius, give a chance to transform
     # to a d tile
     def shockwave(self):
         for tile_coord in self.tiles_around:
             if random.uniform(0, 1) < 0.5:
-                self.set_tile("D", self.x_pos +
-                              tile_coord[0], self.y_pos+tile_coord[1])
+                self.set_tile("D", self.x_pos + tile_coord[0], self.y_pos+tile_coord[1])
             else:
-                self.remove_tile(
-                    self.x_pos+tile_coord[0], self.y_pos+tile_coord[1])
+                self.remove_tile(self.x_pos+tile_coord[0], self.y_pos+tile_coord[1])
 
     # Transform a ' ' tile to a b tile, use materials from inventory
     def build(self):
@@ -278,6 +284,7 @@ class Rover:
         elif self.get_tile() != " ":
             print(f"{self.name} must be on an empty tile")
             return
+        # use resources from inventory and 10 power
         self.set_tile("B")
         self.copper -= 1
         self.silver -= 1
@@ -285,11 +292,12 @@ class Rover:
         self.iron -= 1
         self.power -= 10
 
-    # Count and print and return the number of d tiles in a radius
+    # Count and print and return the number of d tiles in the map
     # This can be used as a getter as well as an action in the grammar
     # Should always return an int
     def sonar(self) -> int:
         d_tiles = 0
+        # Count d tiles in the map
         for x, row in enumerate(self.map):
             for y, col in enumerate(row):
                 if self.get_tile(x, y) == "D":
@@ -300,23 +308,24 @@ class Rover:
     # When in front of an r tile, push it one tile up front if not an x
     # Chance to uncover d tile
     def push(self):
-        front_tile = tuple(map(operator.add, (self.x_pos, self.y_pos),
-                               self.tiles_around[self.orientation]))
+        # Get tile facing the rover
+        front_tile = tuple(map(operator.add, (self.x_pos, self.y_pos), self.tiles_around[self.orientation]))
         if self.get_tile(front_tile[0], front_tile[1]) != "R":
             print(f"{self.name} must face a R tile to push")
             return
-        next_tile = tuple(map(operator.add, front_tile,
-                              self.tiles_around[self.orientation]))
+        # Get the tile facing the rock from the rover
+        next_tile = tuple(map(operator.add, front_tile, self.tiles_around[self.orientation]))
         if self.get_tile(next_tile[0], next_tile[1]) == "X":
             print(f"{self.name} unable to push R on an X tile")
             return
         self.set_tile("R", next_tile[0], next_tile[1])
-        self.set_tile(random.choice(['X', ' ']), front_tile[0], front_tile[1])
+        # random chance to find d tile under the rock
+        self.set_tile(random.choice(['D', ' ']), front_tile[0], front_tile[1])
 
     # When on a digit tile, at that digit * 10 to the rovers power
     def recharge(self):
         if self.get_tile().isdigit():
-            self.power += int(self.get_tile()) * 10
+            self.power += int(self.get_tile()) * 10  # restore some power
             self.remove_tile()
         else:
             print(f"{self.name} must be on a digit tile")
@@ -336,10 +345,11 @@ class Rover:
 
     # Print the map with the rover in the correct position
     # use ^, >, v, < depending on the orientation
-    def _print_map(self):
+    def print_map(self):
         # this is bad but good enough
-        output_map = copy.deepcopy(self.map)
+        output_map = copy.deepcopy(self.map)  # get a copy so we don't actually modify the rover's map
         x = ""
+        # Set the rover tile depending on orientation
         if self.orientation == 0:
             x = "^"
         elif self.orientation == 1:
@@ -349,9 +359,9 @@ class Rover:
         else:
             x = "<"
 
-        output_map[self.y_pos][self.x_pos] = x
+        output_map[self.y_pos][self.x_pos] = x  # place the rover in the map
         print('\n'.join([''.join(['{:4}'.format(item) for item in row])
-                         for row in output_map]))
+                        for row in output_map]))
 
     # Print the current position
     def print_pos(self):

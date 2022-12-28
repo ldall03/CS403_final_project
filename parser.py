@@ -70,7 +70,7 @@ Create nodes + parse tree using grammar:
                 | MAX_MOVE <direction>
                 | CAN_MOVE <direction
 
-    <action>  ::= SCAN              TODO: add node
+    <action>  ::= SCAN
                 | DRILL
                 | SHOCKWAVE
                 | BUILD
