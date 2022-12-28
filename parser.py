@@ -203,7 +203,7 @@ def get_token():
             return Token(curr, Vocab.BASIC)
         return Token(curr, _get_vocab_entry(curr))
 
-    # Handle number literals
+    # Handle number literals and strings
     if is_integer(curr):
         return Token(curr, Vocab.NUM)
     if is_double(curr):
