@@ -180,25 +180,25 @@ class Rover:
 
     # Get the character in a specific tile
     def get_tile(self, x=None, y=None) -> str:
-        if not x:
+        if x is None:
             x = self.x_pos
-        if not y:
+        if y is None:
             y = self.y_pos
         return self.map[y][x]
 
     # Set a specific tile
     def set_tile(self, tile_type, x=None, y=None):
-        if not x:
+        if x is None:
             x = self.x_pos
-        if not y:
+        if y is None:
             y = self.y_pos
         self.map[y][x] = tile_type
 
     # Set a specific tile to ' '
     def remove_tile(self, x=None, y=None):
-        if not x:
+        if x is None:
             x = self.x_pos
-        if not y:
+        if y is None:
             y = self.y_pos
         self.set_tile(" ", x, y)
 

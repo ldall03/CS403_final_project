@@ -1248,7 +1248,7 @@ class RotationNode(Node):
 #             | POWER
 #             | SONAR
 #             | MAX_MOVE <direction>
-#             | CAN_MOVE <direction
+#             | CAN_MOVE <direction>
 class GetNode(Node):
     def check_semantics(self):
         if self.children[0].token.ttype == Vocab.CAN_MOVE:  # can_move returns a bool
