@@ -1,12 +1,17 @@
-{
-    string [ 3 ] _names ;
-    int i34 ;
-    i = 0 ;
-    names [ 0 ] = "Loic" ;
-    names [ 1 ] = "Julie " ;
-    names [ 2 ] = "Sandra" ;
-    while ( i < 3 ) {
-        print names [ i ] ;
-        i = i + 1 ;
-    }
-}
+    if ( rover . can_move up == true )
+    {
+        print "moving up" ;
+        rover . move up 1 ;
+    } 
+    if ( rover . can_move left == true )
+    {
+        print "moving left" ;
+        rover . move left 1 ;
+    } 
+    if ( rover . can_move right == true )
+    {
+        print "moving right" ;
+        rover . move right 1 ;
+    } 
+    print "Final position" ;
+    rover . print_pos ;

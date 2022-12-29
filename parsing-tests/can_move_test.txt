@@ -1,0 +1,42 @@
+{
+    print "Initial position" ;
+    rover . print_pos ;
+    if ( rover . can_move down == true )
+    {
+        print "moving down" ;
+        rover . move down 1 ;
+    } 
+    else
+    {
+        print "cannot move down" ;
+    }
+    if ( rover . can_move up == true )
+    {
+        print "moving up" ;
+        rover . move up 1 ;
+    } 
+    else
+    {
+        print "cannot move up" ;
+    }
+    if ( rover . can_move left == true )
+    {
+        print "moving left" ;
+        rover . move left 1 ;
+    }
+    else
+    {
+        print "cannot move left" ;
+    } 
+    if ( rover . can_move right == true )
+    {
+        print "moving right" ;
+        rover . move right 1 ;
+    }
+    else
+    {
+        print "cannot move right" ;
+    } 
+    print "Final position" ;
+    rover . print_pos ;
+}

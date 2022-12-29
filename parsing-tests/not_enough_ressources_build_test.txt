@@ -1,0 +1,6 @@
+{
+    print "Shouldn't be able to build if didnt pick ressources:  " ;
+    rover . build ;
+    rover . build ;
+    rover . build ;
+}

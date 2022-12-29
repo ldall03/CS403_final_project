@@ -1,0 +1,11 @@
+{ 
+    rover . move up rover . max_move up ;
+    rover . print_pos ;
+    if ( rover . can_move up )
+    {
+        print "Should not happen" ;
+    }
+    print "Try to move at a wall coordinate" ;
+    rover . move up 1 ;
+    rover . print_pos ;
+}

@@ -118,7 +118,7 @@ class Rover:
         print(f"{self.name}: {msg}")
 
     def parse_and_execute_cmd(self, command):
-        #self.print(f"Running command: {command}")
+        # self.print(f"Running command: {command}")
         parse_tree = parser.get_parse_tree(command)  # Parse the command
         # parse_tree.show()  # Print parse tree
         # Check semantics
@@ -146,7 +146,7 @@ class Rover:
                 try:
                     self.parse_and_execute_cmd(ROVER_COMMAND[self.name])
                 except Exception as e:
-                    #self.print(f"Failed to run command: {ROVER_COMMAND[self.name]}")
+                    # self.print(f"Failed to run command: {ROVER_COMMAND[self.name]}")
                     self.print(traceback.format_exc())
                 finally:
                     self.print("Finished running command.\n\n")
@@ -268,11 +268,18 @@ class Rover:
     # Destroy all x tiles in a radius, give a chance to transform
     # to a d tile
     def shockwave(self):
+        if self.power < 10:
+            print(f"{self.name} need more power to shockwave")
+            return
         for tile_coord in self.tiles_around:
-            if random.uniform(0, 1) < 0.5:
-                self.set_tile("D", self.x_pos + tile_coord[0], self.y_pos+tile_coord[1])
-            else:
-                self.remove_tile(self.x_pos+tile_coord[0], self.y_pos+tile_coord[1])
+            x_coord = self.x_pos + tile_coord[0]
+            y_coord = self.y_pos + tile_coord[1]
+            if not (x_coord >= len(self.map) or x_coord < 1 or y_coord >= len(self.map[0]) or y_coord < 1):
+                if random.uniform(0, 1) < 0.5:
+                    self.set_tile("D",   x_coord,  y_coord)
+                else:
+                    self.remove_tile(
+                        x_coord,  y_coord)
 
     # Transform a ' ' tile to a b tile, use materials from inventory
     def build(self):
@@ -310,12 +317,14 @@ class Rover:
     # Chance to uncover d tile
     def push(self):
         # Get tile facing the rover
-        front_tile = tuple(map(operator.add, (self.x_pos, self.y_pos), self.tiles_around[self.orientation]))
+        front_tile = tuple(
+            map(operator.add, (self.x_pos, self.y_pos), self.tiles_around[self.orientation]))
         if self.get_tile(front_tile[0], front_tile[1]) != "R":
             print(f"{self.name} must face a R tile to push")
             return
         # Get the tile facing the rock from the rover
-        next_tile = tuple(map(operator.add, front_tile, self.tiles_around[self.orientation]))
+        next_tile = tuple(map(operator.add, front_tile,
+                          self.tiles_around[self.orientation]))
         if self.get_tile(next_tile[0], next_tile[1]) == "X":
             print(f"{self.name} unable to push R on an X tile")
             return
@@ -348,7 +357,8 @@ class Rover:
     # use ^, >, v, < depending on the orientation
     def print_map(self):
         # this is bad but good enough
-        output_map = copy.deepcopy(self.map)  # get a copy so we don't actually modify the rover's map
+        # get a copy so we don't actually modify the rover's map
+        output_map = copy.deepcopy(self.map)
         x = ""
         # Set the rover tile depending on orientation
         if self.orientation == 0:
@@ -366,18 +376,18 @@ class Rover:
 
     # Print the current position
     def print_pos(self):
-        print(f'I am located at: ({self.x_pos}, {self.y_pos})')
+        print(f'{self.name} located at: ({self.x_pos}, {self.y_pos})')
 
     # Print current orientation
     def print_orientation(self):
         if self.orientation == 0:
-            print(f'I am facing North.')
+            print(f'{self.name} facing North.')
         elif self.orientation == 1:
-            print(f'I am facing East.')
+            print(f'{self.name} facing East.')
         elif self.orientation == 2:
-            print(f'I am facing South.')
+            print(f'{self.name} facing South.')
         elif self.orientation == 3:
-            print(f'I am facing West.')
+            print(f'{self.name} facing West.')
 
     # Change the map given by a path to a file and initialize
     # the rover in a random position
@@ -399,10 +409,8 @@ class Rover:
 def main():
     # Initialize the rovers
     rover1 = Rover(ROVER_1)
-    rover2 = Rover(ROVER_2)
-    my_rovers = [rover1, rover2]
-
-    # Run the rovers in parallel
+   # rover2 = Rover(ROVER_2)
+    my_rovers = [rover1]
     procs = []
     for rover in my_rovers:
         p = multiprocessing.Process(target=rover.wait_for_command, args=())

@@ -1,13 +1,9 @@
 {
 	int my_int ;
 	int length ;
-<<<<<<< HEAD
 	my_int = 5 ;
 	length = 10 ;
 	if ( my_int < length ) length = 55 ; // if stmt
-=======
-	if ( my_int < length ) length = 55 ;
->>>>>>> rover_features
 	else {
 	    bool value ;
 	    value = true ;
@@ -25,10 +21,7 @@
         bool other ;
 	    {
             int value ;
-<<<<<<< HEAD
             value = 10 ;
-=======
->>>>>>> rover_features
             value = - value ;
             value = - - value ;
             other = ! true ;
