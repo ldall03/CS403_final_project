@@ -32,13 +32,10 @@
         max_move_down = rover . max_move down ;
         max_move_left = rover . max_move left ;
         max_move_right = rover . max_move right ;
-        // not implemented yet
-        /**
         bool can_move_up = rover . can_move up ;
         bool can_move_down = rover . can_move down ;
         bool can_move_left = rover . can_move left ;
         bool can_move_right = rover . can_move right ;
-        **/
         print "" ;
     }
 
@@ -47,10 +44,10 @@
         rover . scan ;
         rover . drill ;
         rover . shockwave ;
-        // rover . build ;
-        // rover . sonar ;
-        // rover . push ;
-        // rover . recharge ;
+        rover . build ;
+        rover . sonar ;
+        rover . push ;
+        rover . recharge ;
         rover . backflip ;
         rover . print_inventory ;
         rover . print_map ;

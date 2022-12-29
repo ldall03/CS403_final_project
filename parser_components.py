@@ -39,7 +39,7 @@ class Stack:
     # Assign a value to a variable in open scopes
     def assign(self, obj, value):
         name = obj['name']  # name of the variable
-        ttype = obj['ttype']  # type of the variable (used for in casting)
+        ttype = obj['ttype']  # type of the variable (used for int casting)
         if ttype == 'int':  # cast to int cuz we might get a double from python division
             value = int(value)
 
@@ -51,7 +51,6 @@ class Stack:
                     break
         else:
             instance = []
-            _arr = []
             # Reverse array to get the innermost scope first
             for d in self.arr[::-1]:  # first get the full array (stored in scope)
                 if name in d:
@@ -61,7 +60,8 @@ class Stack:
             for i in obj['arr_info'][0:-1]:  # get selected innermost array
                 instance = instance[i]
 
-            instance[obj['arr_info'][-1]] = value  # Change its value, this changes the value in the scope as well
+            # Change its value at selected index, this changes the value in the scope as well
+            instance[obj['arr_info'][-1]] = value
 
 
 # Store scopes in a stack where the top scope

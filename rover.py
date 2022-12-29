@@ -118,7 +118,7 @@ class Rover:
         print(f"{self.name}: {msg}")
 
     def parse_and_execute_cmd(self, command):
-        # self.print(f"Running command: {command}")
+        self.print(f"Running command: {command}")
         parse_tree = parser.get_parse_tree(command)  # Parse the command
         # parse_tree.show()  # Print parse tree
         # Check semantics
@@ -146,7 +146,7 @@ class Rover:
                 try:
                     self.parse_and_execute_cmd(ROVER_COMMAND[self.name])
                 except Exception as e:
-                    # self.print(f"Failed to run command: {ROVER_COMMAND[self.name]}")
+                    self.print(f"Failed to run command: {ROVER_COMMAND[self.name]}")
                     self.print(traceback.format_exc())
                 finally:
                     self.print("Finished running command.\n\n")
@@ -409,7 +409,7 @@ class Rover:
 def main():
     # Initialize the rovers
     rover1 = Rover(ROVER_1)
-   # rover2 = Rover(ROVER_2)
+    # rover2 = Rover(ROVER_2)
     my_rovers = [rover1]
     procs = []
     for rover in my_rovers:
