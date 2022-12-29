@@ -208,7 +208,7 @@ class Rover:
         facing = self.tiles_around[direction]  # get correct direction
         steps = 0
         # Check how far we can move without getting an 'X' tile
-        while self.get_tile(self.x_pos+facing[0]*(steps+1), self.y_pos+facing[1]*(steps+1)) != "X":
+        while self.get_tile(self.x_pos + facing[0] * (steps + 1), self.y_pos + facing[1] * (steps + 1)) != "X":
             steps += 1
         return steps
 
@@ -276,10 +276,10 @@ class Rover:
             y_coord = self.y_pos + tile_coord[1]
             if not (x_coord >= len(self.map) or x_coord < 1 or y_coord >= len(self.map[0]) or y_coord < 1):
                 if random.uniform(0, 1) < 0.5:
-                    self.set_tile("D",   x_coord,  y_coord)
+                    self.set_tile("D", x_coord, y_coord)
                 else:
                     self.remove_tile(
-                        x_coord,  y_coord)
+                        x_coord, y_coord)
 
     # Transform a ' ' tile to a b tile, use materials from inventory
     def build(self):
@@ -324,7 +324,7 @@ class Rover:
             return
         # Get the tile facing the rock from the rover
         next_tile = tuple(map(operator.add, front_tile,
-                          self.tiles_around[self.orientation]))
+                              self.tiles_around[self.orientation]))
         if self.get_tile(next_tile[0], next_tile[1]) == "X":
             print(f"{self.name} unable to push R on an X tile")
             return
@@ -372,7 +372,7 @@ class Rover:
 
         output_map[self.y_pos][self.x_pos] = x  # place the rover in the map
         print('\n'.join([''.join(['{:4}'.format(item) for item in row])
-                        for row in output_map]))
+                         for row in output_map]))
 
     # Print the current position
     def print_pos(self):
@@ -406,7 +406,7 @@ class Rover:
             self.orientation = 3
 
 
-def main():
+def _main():
     # Initialize the rovers
     rover1 = Rover(ROVER_1)
     # rover2 = Rover(ROVER_2)
@@ -422,7 +422,7 @@ def main():
         p.join()
 
 
-def _main():  # temporary main for testing
+def main():  # temporary main for testing
     rover = Rover(ROVER_1)
 
     # changing current tile
@@ -485,13 +485,13 @@ def _main():  # temporary main for testing
                         rover.tiles_around[rover.orientation]))
     rover.remove_tile(front_n[0], front_n[1])
     rover.push()
-    assert rover.get_tile(front[0], front[1]) == " "
+    assert rover.get_tile(front[0], front[1]) in ["D", " "]
     assert rover.get_tile(front_n[0], front_n[1]) == "R"
 
     # test sonar
-    for tile in rover.tiles_around:
-        rover.set_tile("D", tile[0], tile[1])
-    assert rover.sonar() == 4
+
+    assert rover.sonar() == ''.join([''.join([item for item in row])
+                                     for row in rover.map]).count('D')
 
 
 if __name__ == "__main__":
