@@ -224,6 +224,7 @@ class Rover:
     # a given direction. If we cannot because of an x tile then
     # move as far as possible
     def move(self, direction, steps):
+        self.orientation = direction
         facing = self.tiles_around[direction]
         max_move = self.max_move(direction)
 
