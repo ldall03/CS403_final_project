@@ -48,12 +48,16 @@ class Stack:
             for d in self.arr[::-1]:
                 if name in d:
                     d[name]['value'] = value
+                    break
         else:
             instance = []
+            _arr = []
             # Reverse array to get the innermost scope first
             for d in self.arr[::-1]:  # first get the full array (stored in scope)
                 if name in d:
                     instance = d[name]['value']
+                    break
+
             for i in obj['arr_info'][0:-1]:  # get selected innermost array
                 instance = instance[i]
 
@@ -370,7 +374,6 @@ class BlockNode(Node):
         for child in self.children:
             child.check_semantics()
 
-        print(SCOPE_STACK.top())
         # Pop the stack once we get out of the scope
         SCOPE_STACK.pop()
 
@@ -474,7 +477,10 @@ class TypeclNode(Node):
         ret = []  # array to return
 
         for i in range(length):  # fill ret with the value found length times
-            ret.append(val)
+            if val is None:
+                ret.append(None)
+            else:
+                ret.append(val[:])  # copy the array so we don't have the same instance for each sub arrays
         return ret
 
 
