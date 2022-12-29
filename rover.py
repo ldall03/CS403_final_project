@@ -306,8 +306,8 @@ class Rover:
     def sonar(self) -> int:
         d_tiles = 0
         # Count d tiles in the map
-        for x, row in enumerate(self.map):
-            for y, col in enumerate(row):
+        for y, row in enumerate(self.map):
+            for x, col in enumerate(row):
                 if self.get_tile(x, y) == "D":
                     d_tiles += 1
         print(f"{self.name} found {d_tiles} scannable tiles")
