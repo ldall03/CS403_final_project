@@ -454,14 +454,11 @@ def main():  # temporary main for testing
 
     # test shockwave
     for tile in rover.tiles_around:
-        rover.set_tile("X", rover.get_x_pos() +
-                       tile[0], rover.get_y_pos() + tile[1])
-        assert rover.get_tile(rover.get_x_pos() +
-                              tile[0], rover.get_y_pos() + tile[1]) == "X"
+        rover.set_tile("X", rover.get_x_pos() + tile[0], rover.get_y_pos() + tile[1])
+        assert rover.get_tile(rover.get_x_pos() + tile[0], rover.get_y_pos() + tile[1]) == "X"
     rover.shockwave()
     for tile in rover.tiles_around:
-        assert rover.get_tile(rover.get_x_pos() +
-                              tile[0], rover.get_y_pos() + tile[1]) in ["D", " "]
+        assert rover.get_tile(rover.get_x_pos() + tile[0], rover.get_y_pos() + tile[1]) in ["D", " "]
 
     # test change map
     rover_map = Rover("test_map")
