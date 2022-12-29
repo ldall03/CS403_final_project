@@ -406,7 +406,7 @@ class Rover:
             self.orientation = 3
 
 
-def _main():
+def main():
     # Initialize the rovers
     rover1 = Rover(ROVER_1)
     # rover2 = Rover(ROVER_2)
@@ -422,7 +422,7 @@ def _main():
         p.join()
 
 
-def main():  # temporary main for testing
+def _main():  # temporary main for testing
     rover = Rover(ROVER_1)
 
     # changing current tile

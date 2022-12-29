@@ -1,0 +1,38 @@
+{
+    int direction ;
+    int has_not_moved ;
+    int last_x_pos ; int last_y_pos ;
+    bool break ; break = false ;
+    rover . change_map "push_map.txt" ;
+
+    if ( rover . x_pos > 14 )
+        direction = 0 ;
+    else
+        direction = 1 ;
+
+    last_x_pos = rover . x_pos ;
+    last_y_pos = rover . y_pos ;
+    has_not_moved = 0 ;
+    while ( ! break ) {
+        if ( direction == 0 )
+            rover . move left 1 ;
+        else
+            rover . move right 1 ;
+
+        rover . scan ;
+        rover . drill ;
+
+        if ( last_x_pos == rover . x_pos && last_y_pos == rover . y_pos ) {
+            rover . push ;
+            has_not_moved = has_not_moved + 1 ;
+        }
+        else has_not_moved = 0 ;
+
+        if ( has_not_moved > 2 ) break = true ;
+        last_x_pos = rover . x_pos ;
+        last_y_pos = rover . y_pos ;
+        rover . print_map ;
+    }
+
+    rover . print_inventory ;
+}
