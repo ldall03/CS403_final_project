@@ -208,7 +208,7 @@ class Rover:
         facing = self.tiles_around[direction]  # get correct direction
         steps = 0
         # Check how far we can move without getting an 'X' tile
-        while self.get_tile(self.x_pos + facing[0] * (steps + 1), self.y_pos + facing[1] * (steps + 1)) != "X":
+        while self.get_tile(self.x_pos + facing[0] * (steps + 1), self.y_pos + facing[1] * (steps + 1)) not in ['X', 'R']:
             steps += 1
         return steps
 
