@@ -371,7 +371,7 @@ class Rover:
             x = "<"
 
         output_map[self.y_pos][self.x_pos] = x  # place the rover in the map
-        print('\n'.join([''.join(['{:4}'.format(item) for item in row])
+        print('\n'.join([''.join(['{:2}'.format(item) for item in row])
                          for row in output_map]))
 
     # Print the current position
