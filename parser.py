@@ -774,39 +774,31 @@ def get_parse_tree(file_content):
     for c in file_content:  # loop over every char in file_content
         if line_comment and c == '\n':  # If line comment and new line, comment is done
             line_comment = False
-            continue
-        if block_comment and previous == '*' and c == '/':  # if block comment and '*/' sequence, comment is done
+        elif block_comment and previous == '*' and c == '/':  # if block comment and '*/' sequence, comment is done
             block_comment = False
-            continue
-        if in_string and c == '"':  # if in string and ", string is done
+        elif in_string and c == '"':  # if in string and ", string is done
             in_string = False
             cleaned_content += '"'
             previous = '"'
-            continue
-        if line_comment or block_comment:  # if previous checks false but in comment
+        elif line_comment or block_comment:  # if previous checks false but in comment
             previous = c
-            continue
-        if in_string:  # if in string just add current character
+        elif in_string:  # if in string just add current character
             cleaned_content += c
-            continue
-        if previous == '/' and c == '/':  # start line comment with '//' sequence
+        elif previous == '/' and c == '/':  # start line comment with '//' sequence
             cleaned_content = cleaned_content[:-1]  # flush previous '/' from file
             line_comment = True
             previous = c
-            continue
-        if previous == '/' and c == '*':  # start block comment with '*/' sequence
+        elif previous == '/' and c == '*':  # start block comment with '*/' sequence
             cleaned_content = cleaned_content[:-1]  # flush previous '/' from file
             block_comment = True
             previous = c
-            continue
-        if c == '"':  # if " then start a string
+        elif c == '"':  # if " then start a string
             cleaned_content += '"'
             in_string = True
-            continue
-
-        # if no comments just add the character to cleaned_content as normal
-        cleaned_content += c
-        previous = c  # Keep track of previous character
+        else:
+            # if no comments just add the character to cleaned_content as normal
+            cleaned_content += c
+            previous = c  # Keep track of previous character
 
     # Split the content, then reverse the list so we
     # can use it like a stack
