@@ -146,7 +146,8 @@ class Rover:
                 try:
                     self.parse_and_execute_cmd(ROVER_COMMAND[self.name])
                 except Exception as e:
-                    self.print(f"Failed to run command: {ROVER_COMMAND[self.name]}")
+                    self.print(
+                        f"Failed to run command: {ROVER_COMMAND[self.name]}")
                     self.print(traceback.format_exc())
                 finally:
                     self.print("Finished running command.\n\n")
@@ -274,7 +275,9 @@ class Rover:
         for tile_coord in self.tiles_around:
             x_coord = self.x_pos + tile_coord[0]
             y_coord = self.y_pos + tile_coord[1]
-            if not (x_coord >= len(self.map) or x_coord < 1 or y_coord >= len(self.map[0]) or y_coord < 1):
+            if not (x_coord >= len(self.map[0]) or x_coord < 1 or y_coord >= len(self.map) or y_coord < 1):
+                print(f"tile_coord: {tile_coord[0]},{tile_coord[1]}")
+                print(x_coord, y_coord)
                 if random.uniform(0, 1) < 0.5:
                     self.set_tile("D", x_coord, y_coord)
                 else:
@@ -409,17 +412,19 @@ class Rover:
 def main():
     # Initialize the rovers
     rover1 = Rover(ROVER_1)
-    # rover2 = Rover(ROVER_2)
-    my_rovers = [rover1]
-    procs = []
-    for rover in my_rovers:
-        p = multiprocessing.Process(target=rover.wait_for_command, args=())
-        p.start()
-        procs.append(p)
+    print(rover1.print_pos())
+    rover1.shockwave()
+    # # rover2 = Rover(ROVER_2)
+    # my_rovers = [rover1]
+    # procs = []
+    # for rover in my_rovers:
+    #     p = multiprocessing.Process(target=rover.wait_for_command, args=())
+    #     p.start()
+    #     procs.append(p)
 
-    # Wait for the rovers to stop running (after MAX_RUNTIME)
-    for p in procs:
-        p.join()
+    # # Wait for the rovers to stop running (after MAX_RUNTIME)
+    # for p in procs:
+    #     p.join()
 
 
 def _main():  # temporary main for testing
@@ -454,11 +459,14 @@ def _main():  # temporary main for testing
 
     # test shockwave
     for tile in rover.tiles_around:
-        rover.set_tile("X", rover.get_x_pos() + tile[0], rover.get_y_pos() + tile[1])
-        assert rover.get_tile(rover.get_x_pos() + tile[0], rover.get_y_pos() + tile[1]) == "X"
+        rover.set_tile("X", rover.get_x_pos() +
+                       tile[0], rover.get_y_pos() + tile[1])
+        assert rover.get_tile(rover.get_x_pos() +
+                              tile[0], rover.get_y_pos() + tile[1]) == "X"
     rover.shockwave()
     for tile in rover.tiles_around:
-        assert rover.get_tile(rover.get_x_pos() + tile[0], rover.get_y_pos() + tile[1]) in ["D", " "]
+        assert rover.get_tile(
+            rover.get_x_pos() + tile[0], rover.get_y_pos() + tile[1]) in ["D", " "]
 
     # test change map
     rover_map = Rover("test_map")
