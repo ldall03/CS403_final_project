@@ -76,13 +76,14 @@ class Rover:
 
         self.x_pos = None
         self.y_pos = None
-        self.orientation = None
+        self.orientation = None  # 0 to 3
         self.gold = 1
         self.silver = 1
         self.copper = 1
         self.iron = 1
         self.power = 100
 
+        # Initialize
         self.map_init()
         self.set_coord()
 
@@ -179,7 +180,7 @@ class Rover:
     def get_power(self):
         return self.power
 
-    # Get the character in a specific tile
+    # Get a specific tile value
     def get_tile(self, x=None, y=None) -> str:
         if x is None:
             x = self.x_pos
@@ -314,7 +315,7 @@ class Rover:
                 if self.get_tile(x, y) == "D":
                     d_tiles += 1
         print(f"{self.name} found {d_tiles} scannable tiles")
-        return d_tiles
+        return d_tiles  # Return value as it can be used as a getter by the rover
 
     # When in front of an r tile, push it one tile up front if not an x
     # Chance to uncover d tile
@@ -332,7 +333,7 @@ class Rover:
             print(f"{self.name} unable to push R on an X tile")
             return
         self.set_tile("R", next_tile[0], next_tile[1])
-        # random chance to find d tile under the rock
+        # Random chance to find d tile under the rock
         self.set_tile(random.choice(['D', ' ']), front_tile[0], front_tile[1])
 
     # When on a digit tile, at that digit * 10 to the rovers power
@@ -345,7 +346,7 @@ class Rover:
 
     # This is stupid but it's funny
     def backflip(self):
-        self.orientation = (self.orientation + 2) % 4
+        self.orientation = (self.orientation + 2) % 4  # Flip orientation
 
     # Print what is in our inventory
     def print_inventory(self):
@@ -359,7 +360,6 @@ class Rover:
     # Print the map with the rover in the correct position
     # use ^, >, v, < depending on the orientation
     def print_map(self):
-        # this is bad but good enough
         # get a copy so we don't actually modify the rover's map
         output_map = copy.deepcopy(self.map)
         x = ""
@@ -412,19 +412,16 @@ class Rover:
 def main():
     # Initialize the rovers
     rover1 = Rover(ROVER_1)
-    print(rover1.print_pos())
-    rover1.shockwave()
-    # # rover2 = Rover(ROVER_2)
-    # my_rovers = [rover1]
-    # procs = []
-    # for rover in my_rovers:
-    #     p = multiprocessing.Process(target=rover.wait_for_command, args=())
-    #     p.start()
-    #     procs.append(p)
+    my_rovers = [rover1]
+    procs = []
+    for rover in my_rovers:
+        p = multiprocessing.Process(target=rover.wait_for_command, args=())
+        p.start()
+        procs.append(p)
 
-    # # Wait for the rovers to stop running (after MAX_RUNTIME)
-    # for p in procs:
-    #     p.join()
+    # Wait for the rovers to stop running (after MAX_RUNTIME)
+    for p in procs:
+        p.join()
 
 
 def _main():  # temporary main for testing
@@ -494,7 +491,6 @@ def _main():  # temporary main for testing
     assert rover.get_tile(front_n[0], front_n[1]) == "R"
 
     # test sonar
-
     assert rover.sonar() == ''.join([''.join([item for item in row])
                                      for row in rover.map]).count('D')
 

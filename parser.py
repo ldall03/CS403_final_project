@@ -806,11 +806,11 @@ def get_parse_tree(file_content):
 
         # if no comments just add the character to cleaned_content as normal
         cleaned_content += c
-        previous = c
+        previous = c  # Keep track of previous character
 
     # Split the content, then reverse the list so we
     # can use it like a stack
-    FILE_CONTENT = shlex.split(cleaned_content, posix=False)[::-1]  # Parses out strings as single tokens
+    FILE_CONTENT = shlex.split(cleaned_content, posix=False)[::-1]  # shlex parses out strings as single tokens
     CURR_TOKEN = get_token()
 
     return Program()
@@ -828,5 +828,3 @@ if __name__ == "__main__":
         fcontent = f.read()
 
     program = get_parse_tree(fcontent)
-    program.check_semantics()
-    program.run()

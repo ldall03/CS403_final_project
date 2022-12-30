@@ -28,13 +28,13 @@ class Stack:
 
         return False
 
-    # Returns info about the name found in the open scope
+    # Returns info about the first name found in the open scopes
     def get_name(self, name):
         # Reverse array to get the innermost scope first
         for d in self.arr[::-1]:
             if name in d:
                 return d[name]
-        raise UndefinedVariableError(name)
+        raise UndefinedVariableError(name)  # Error if found nothing
 
     # Assign a value to a variable in open scopes
     def assign(self, obj, value):
@@ -49,15 +49,16 @@ class Stack:
                 if name in d:
                     d[name]['value'] = value
                     break
-        else:
+        else:  # dealing with an array
             instance = []
             # Reverse array to get the innermost scope first
             for d in self.arr[::-1]:  # first get the full array (stored in scope)
                 if name in d:
-                    instance = d[name]['value']
+                    instance = d[name]['value']  # get the n-d array
                     break
 
-            for i in obj['arr_info'][0:-1]:  # get selected innermost array
+            # arr_info is [i, j, k] where i, j, k are the indices to check when calling arr[i][j][k]
+            for i in obj['arr_info'][0:-1]:  # get selected innermost arrays until we get a 1-d array
                 instance = instance[i]
 
             # Change its value at selected index, this changes the value in the scope as well
@@ -339,7 +340,7 @@ class Node:
         elif self.token == NonTerminals.GET:
             return "get"
         else:
-            return "__UNKNOWN_TOKEN__"
+            return "__UNKNOWN__"
 
     def check_semantics(self):
         for child in self.children:
@@ -444,7 +445,7 @@ class TypeNode(Node):
             'ttype': ttype,
             # arr_info is an array [i, j, k, ...] where i j k are the length for each subarray respectively
             # ex: int [ i ] [ j ] [ k ] array ; -> [i, j, k]
-            'value': arr_info  # if we have an array we initialize with an array of correct size of None values
+            'value': arr_info  # if we have an array we initialize it with an array of correct size of None values
         }
 
 
@@ -453,13 +454,14 @@ class TypeNode(Node):
 class TypeclNode(Node):
     def check_semantics(self):
         # If there is children then we are dealing with an array
+        # Check for NUM is done when parsing
         if len(self.children) > 0:
             type_info = self.children[1].check_semantics()  # Info on dim > 1 arrays
             type_info['dim'] = type_info['dim'] + 1  # Add a dimension every iteration
             type_info['is_arr'] = True  # Set is_arr flag to true
             return type_info
 
-        # No children then just basic type
+        # No children then just basic type, this is the base case
         return {
             'ttype': None,
             'is_arr': False,
@@ -534,7 +536,7 @@ class StmtNode(Node):
         # If loc node
         if isinstance(self.children[0], LocNode):
             name_obj = self.children[0].run(rover)  # get info about variable
-            bool_obj = self.children[2].run(rover)  # evaluate to bool stmt
+            bool_obj = self.children[2].run(rover)  # evaluate the bool stmt
 
             global SCOPE_STACK
             SCOPE_STACK.assign(name_obj, bool_obj)  # assign the value to the correct variable in scope
@@ -562,11 +564,7 @@ class StmtNode(Node):
 
         # If while
         elif self.children[0].token.ttype == Vocab.WHILE:
-            while True:  # keep going
-                bool_obj = self.children[1].run(rover)
-                if not bool_obj:  # break if the bool is false
-                    break
-
+            while self.children[1].run(rover):  # keep going
                 self.children[2].run(rover)  # keep running the stmt
 
 
@@ -596,13 +594,13 @@ class LocNode(Node):
 
         # Handle array types
         # Can only assign to a basic type
-        # So can only assign to the deepest indices of arrays
+        # So can only assign to the deepest subarray of arrays
         symbol = SCOPE_STACK.get_name(name)  # Get info from symbol table
         type_info = self.children[1].check_semantics()  # Check if we ask for an array index
         type_dim = symbol['dim'] - type_info['dim']  # Gets the dimension of the assignment
         if type_dim < 0:
             # If negative then we asked for higher dimension than the array has
-            raise TypeMismatchError('valid subscript', 'invalid subscript', extra='Wrong array subscript type')
+            raise TypeMismatchError('Basic type', 'Array type', extra='Wrong array subscript')
         is_arr = True if type_dim > 0 else False  # if type_dim is 0 then it is a basic type
 
         return {
@@ -1267,6 +1265,7 @@ class GetNode(Node):
             }
 
     def run(self, rover):
+        # Get the correct rover attribute depending on the token we got
         if self.children[0].token.ttype == Vocab.ORIENTATION:
             return rover.orientation
         if self.children[0].token.ttype == Vocab.X_POS:
@@ -1314,7 +1313,10 @@ class ActionNode(Node):
             if bool_info['ttype'] != 'int':
                 raise TypeMismatchError('int', bool_info['ttype'])
 
+        # STRING check for change_map is done while parsing
+
     def run(self, rover):
+        # Do the correct rover action depending on the token we got
         if self.children[0].token.ttype == Vocab.SCAN:
             rover.scan()
         elif self.children[0].token.ttype == Vocab.DRILL:

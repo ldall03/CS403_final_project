@@ -1,3 +1,11 @@
+/**
+    This code is absolutely hideous but it works.
+    Rover does dfs to scan and mine all d nodes specified and
+    goes to recharge when there is still a digit node
+    available and it runs out of power.
+**/
+
+
 {
     /** Initialize stuff globally **/
     // Hard code important tile positions:
